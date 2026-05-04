@@ -1,0 +1,395 @@
+import { formatINR, formatDate } from './utils.js';
+
+function isFilled(value) {
+  return value !== undefined && value !== null && value !== '';
+}
+
+function moneyOrBlank(value) {
+  if (!isFilled(value)) return '';
+  return formatINR(Number(value) || 0);
+}
+
+function taxLabel(label, rate) {
+  return isFilled(rate) ? `${label} @ ${rate}%` : label;
+}
+
+/* =========================================================
+   Always show every field. If value is missing, leave a
+   visible blank line (______) so layout never collapses.
+   This solves the "empty field disappears" issue both in
+   preview and in PDF.
+   ========================================================= */
+function valOrBlank(value) {
+  return isFilled(value) ? value : '<span class="inv-blank-line">______</span>';
+}
+
+function buildPartyMeta(inv, useIcons = false) {
+  const rows = [
+    { icon: '👤', label: 'Party',         value: inv.partyName },
+    { icon: '📍', label: 'Place of Supply', value: inv.placeOfSupply },
+    { icon: '🗺',  label: 'State',         value: inv.state },
+    { icon: '#',  label: 'State Code',    value: inv.stateCode },
+    { icon: '#',  label: 'Party GSTIN',   value: inv.partyGstin, gstin: true }
+  ];
+
+  return rows.map((r) => {
+    const cls = r.gstin ? 'inv-meta-row inv-gstin-row' : 'inv-meta-row';
+    if (useIcons) {
+      return `<div class="${cls}"><span class="ico">${r.icon}</span><span class="inv-meta-text"><strong>${r.label}:</strong> ${valOrBlank(r.value)}</span></div>`;
+    }
+    return `<div class="${cls}"><span class="inv-meta-text"><strong>${r.label}:</strong> ${valOrBlank(r.value)}</span></div>`;
+  }).join('');
+}
+
+function buildInvoiceMeta(inv, useIcons = false) {
+  const items = [
+    { icon: '📋', label: 'Invoice No.',  value: inv.invoiceNo },
+    { icon: '🚚', label: 'Challan No.',  value: inv.challanNo },
+    { icon: '📅', label: 'Invoice Date', value: inv.invoiceDate ? formatDate(inv.invoiceDate) : '' },
+    { icon: '🚗', label: 'Vehicle No.',  value: inv.vehicleNo }
+  ];
+
+  return items.map((item) => {
+    if (useIcons) {
+      return `<div class="inv-meta-row"><span class="ico">${item.icon}</span><span class="inv-meta-text"><strong>${item.label}:</strong> ${valOrBlank(item.value)}</span></div>`;
+    }
+    return `<div class="inv-meta-row"><span class="inv-meta-text"><strong>${item.label}:</strong> ${valOrBlank(item.value)}</span></div>`;
+  }).join('');
+}
+
+function buildContact(company, useCircleIcons = false) {
+  const phones = [];
+  if (company.mobile01) phones.push(company.mobile01);
+  if (company.mobile02) phones.push(company.mobile02);
+
+  const phoneIcon = useCircleIcons ? `<span class="ic-circle">📞</span>` : '📞';
+  const emailIcon = useCircleIcons ? `<span class="ic-circle">✉</span>` : '✉';
+
+  const parts = [];
+  // Always render two phone slots so layout height is fixed
+  parts.push(`<div class="row">${phoneIcon} <span class="val">${phones[0] || '\u00A0'}</span></div>`);
+  parts.push(`<div class="row">${phoneIcon} <span class="val">${phones[1] || '\u00A0'}</span></div>`);
+  parts.push(`<div class="row">${emailIcon} <span class="val">${company.email || '\u00A0'}</span></div>`);
+
+  return `<div class="inv-contact">${parts.join('')}</div>`;
+}
+
+function buildSummary(inv, company) {
+  // GSTIN line — fixed format: "GSTIN :- XXXXX", left aligned, same size,
+  // and visually connected to the bordered box around it.
+  const gstinValue = company.gstin || '';
+  const companyGstin = `
+    <div class="gstin-line">
+      <span class="gstin-text">GSTIN :- ${gstinValue || '______'}</span>
+    </div>
+  `;
+
+  return `
+    <div class="inv-summary">
+      <div class="words">
+        ${companyGstin}
+        <div class="words-label">Total in Words:</div>
+        <div class="words-text">${inv.totalInWords || '\u00A0'}</div>
+      </div>
+      <div class="totals">
+        <div><span>Total</span><span>${moneyOrBlank(inv.subtotal)}</span></div>
+        <div><span>${taxLabel('SGST', inv.sgst)}</span><span>${moneyOrBlank(inv.sgstAmt)}</span></div>
+        <div><span>${taxLabel('CGST', inv.cgst)}</span><span>${moneyOrBlank(inv.cgstAmt)}</span></div>
+        <div><span>${taxLabel('IGST', inv.igst)}</span><span>${moneyOrBlank(inv.igstAmt)}</span></div>
+        <div><span>Invoice Total</span><span>${moneyOrBlank(inv.invoiceTotal)}</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function buildItemsTable(items) {
+  const safeItems = Array.isArray(items) ? items.filter((item) => (
+    item && (isFilled(item.particulars) || isFilled(item.qty) || isFilled(item.rate) || isFilled(item.amount))
+  )) : [];
+
+  const minRows = 12;
+  const display = [...safeItems];
+  while (display.length < minRows) {
+    display.push({ particulars: '', qty: '', rate: '', amount: '', __blank: true });
+  }
+
+  const rows = display.map((item, index) => {
+    const hasContent = !item.__blank && (isFilled(item.particulars) || isFilled(item.qty) || isFilled(item.rate) || isFilled(item.amount));
+    return `
+      <tr class="${item.__blank ? 'inv-row-empty' : ''}">
+        <td>${hasContent ? (index + 1) : '\u00A0'}</td>
+        <td>${item.particulars || '\u00A0'}</td>
+        <td>${isFilled(item.qty) ? item.qty : '\u00A0'}</td>
+        <td>${isFilled(item.rate) ? formatINR(item.rate) : '\u00A0'}</td>
+        <td>${isFilled(item.amount) ? formatINR(item.amount) : '\u00A0'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  return `
+    <div class="inv-table-shell">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th style="width:52px;">Sr. No.</th>
+            <th>PARTICULARS</th>
+            <th style="width:78px;">Qty.</th>
+            <th style="width:98px;">Rate</th>
+            <th style="width:110px;">Amount</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildHeader(company, contact) {
+  const topTitle = company.topTitle || '';
+  const fullName = [company.name01 || '', company.name02 || ''].filter(Boolean).join(' ').trim();
+  const subTitle = company.subTitle || '';
+  const nameColor = company.nameColor || '';
+
+  const logoCell = company.logoUrl
+    ? `<div class="inv-logo-cell"><img src="${company.logoUrl}" alt="logo" crossorigin="anonymous"></div>`
+    : `<div class="inv-logo-cell inv-logo-empty">LOGO</div>`;
+
+  const titleHtml = topTitle ? `<div class="inv-tax-badge">${topTitle}</div>` : `<div class="inv-tax-badge">TAX INVOICE</div>`;
+  const nameHtml = `<h1 class="inv-company-name" style="${nameColor ? `color:${nameColor};` : ''}">${(fullName || 'Company Name').toUpperCase()}</h1>`;
+  const subtitleHtml = `<div class="inv-subtitle">${subTitle || '\u00A0'}</div>`;
+
+  return {
+    logoCell,
+    fullName: fullName || 'Company Name',
+    headerCenter: `
+      <div class="inv-header-center">
+        ${titleHtml}
+        ${nameHtml}
+        ${subtitleHtml}
+      </div>
+    `,
+    contact
+  };
+}
+
+function buildFooter(inv, company, fullName, bankHTML, variant = 'classic') {
+  const receiverSignature = inv.signatureUrl
+    ? `<div class="sig-img-wrap"><img src="${inv.signatureUrl}" alt="Receiver signature" crossorigin="anonymous"></div>`
+    : `<div class="sig-img-wrap"></div>`;
+  const authorisedSignature = company.signUrl
+    ? `<div class="sig-img-wrap"><img src="${company.signUrl}" alt="Authorised signature" crossorigin="anonymous"></div>`
+    : `<div class="sig-img-wrap"></div>`;
+  const companyLine = `<div class="for-line">For ${fullName || '______'}</div>`;
+  const safeBank = bankHTML && bankHTML.trim() ? bankHTML : '<div>______</div>';
+
+  if (variant === 'tag') {
+    return `
+      <div class="inv-footer">
+        <div><span class="ftr-tag">BANK DETAILS</span><div class="bank-html">${safeBank}</div></div>
+        <div><span class="ftr-tag">Receiver's Signature</span>${receiverSignature}</div>
+        <div><span class="ftr-tag">Authorised Signature</span>${authorisedSignature}${companyLine}</div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="inv-footer">
+      <div>
+        <div class="bank-title">BANK DETAILS</div>
+        <div class="bank-html">${safeBank}</div>
+      </div>
+      <div>
+        <div class="sig-label">Receiver's Signature</div>
+        ${receiverSignature}
+      </div>
+      <div>
+        <div class="sig-label">Authorised Signature</div>
+        ${authorisedSignature}
+        ${companyLine}
+      </div>
+    </div>
+  `;
+}
+
+function addressBlock(address, variant) {
+  // Always render the address box (with horizontal line) even if empty,
+  // so the line never goes missing in the PDF.
+  const safe = address && address.trim() ? address : '\u00A0';
+  if (variant === 'plain') {
+    return `<div class="inv-address">📍 <strong>ADDRESS:</strong> ${safe}</div>`;
+  }
+  if (variant === 'inline') {
+    return `<div class="inv-address"><span class="inv-address-tag">📍 ADDRESS</span> ${safe}</div>`;
+  }
+  return `<div class="inv-address"><span class="inv-address-tag">📍 ADDRESS</span><div class="inv-address-body">${safe}</div></div>`;
+}
+
+export function renderInvoiceTemplate(style, invoice, company) {
+  const inv = invoice || {};
+  const c = company || {};
+  const items = inv.items || [];
+  const bankHTML = c.bankDetail || '';
+  const address = c.address || '';
+
+  if (style == 1) {
+    const header = buildHeader(c, buildContact(c, false));
+    return `
+      <div class="invoice-paper style-1" id="invoicePaper">
+        <div class="inv-stretch-content">
+          <div class="inv-top">
+            ${header.logoCell}
+            ${header.headerCenter}
+            ${header.contact}
+          </div>
+          ${addressBlock(address, 'plain')}
+          <div class="inv-meta">
+            <div>${buildPartyMeta(inv, false)}</div>
+            <div>${buildInvoiceMeta(inv, false)}</div>
+          </div>
+          <div class="inv-table-section">
+            ${buildItemsTable(items)}
+          </div>
+          ${buildSummary(inv, c)}
+          ${buildFooter(inv, c, header.fullName, bankHTML, 'classic')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (style == 2) {
+    const header = buildHeader(c, buildContact(c, true));
+    return `
+      <div class="invoice-paper style-2" id="invoicePaper">
+        <div class="corner-tl"></div>
+        <div class="corner-tr"></div>
+        <div class="inv-pad">
+          <div class="inv-top">
+            ${header.logoCell}
+            ${header.headerCenter}
+            ${header.contact}
+          </div>
+          ${addressBlock(address, 'tag')}
+          <div class="inv-meta">
+            <div>${buildPartyMeta(inv, true)}</div>
+            <div>${buildInvoiceMeta(inv, true)}</div>
+          </div>
+          <div class="inv-table-section">
+            ${buildItemsTable(items)}
+          </div>
+          ${buildSummary(inv, c)}
+          ${buildFooter(inv, c, header.fullName, bankHTML, 'tag')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (style == 3) {
+    const header = buildHeader(c, buildContact(c, true));
+    return `
+      <div class="invoice-paper style-3" id="invoicePaper">
+        <div class="corner-tr"></div>
+        <div class="corner-bl"></div>
+        <div class="deco-tl"></div>
+        <div class="deco-br"></div>
+        <div class="inv-pad">
+          <div class="inv-top">
+            ${header.logoCell}
+            ${header.headerCenter}
+            ${header.contact}
+          </div>
+          ${addressBlock(address, 'tag')}
+          <div class="inv-meta">
+            <div>${buildPartyMeta(inv, true)}</div>
+            <div>${buildInvoiceMeta(inv, true)}</div>
+          </div>
+          <div class="inv-table-section">
+            ${buildItemsTable(items)}
+          </div>
+          ${buildSummary(inv, c)}
+          ${buildFooter(inv, c, header.fullName, bankHTML, 'tag')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (style == 4) {
+    const header = buildHeader(c, buildContact(c, true));
+    return `
+      <div class="invoice-paper style-4" id="invoicePaper">
+        <div class="inv-pad">
+          <div class="inv-top">
+            ${header.logoCell}
+            ${header.headerCenter}
+            ${header.contact}
+          </div>
+          ${addressBlock(address, 'tag')}
+          <div class="inv-meta">
+            <div>${buildPartyMeta(inv, false)}</div>
+            <div>${buildInvoiceMeta(inv, false)}</div>
+          </div>
+          <div class="inv-table-section">
+            ${buildItemsTable(items)}
+          </div>
+          ${buildSummary(inv, c)}
+          ${buildFooter(inv, c, header.fullName, bankHTML, 'tag')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (style == 5) {
+    const header = buildHeader(c, buildContact(c, true));
+    return `
+      <div class="invoice-paper style-5" id="invoicePaper">
+        <div class="deco-tr"></div>
+        <div class="deco-bl"></div>
+        <div class="inv-pad">
+          <div class="inv-top">
+            ${header.logoCell}
+            ${header.headerCenter}
+            ${header.contact}
+          </div>
+          ${addressBlock(address, 'inline')}
+          <div class="inv-meta">
+            <div>${buildPartyMeta(inv, true)}</div>
+            <div>${buildInvoiceMeta(inv, true)}</div>
+          </div>
+          <div class="inv-table-section">
+            ${buildItemsTable(items)}
+          </div>
+          ${buildSummary(inv, c)}
+          ${buildFooter(inv, c, header.fullName, bankHTML, 'tag')}
+        </div>
+      </div>
+    `;
+  }
+
+  return '';
+}
+
+export function getDemoInvoice() {
+  return {
+    invoiceNo: 'INV-2604-1092',
+    challanNo: '20398',
+    invoiceDate: '2026-04-29',
+    vehicleNo: 'MH48BM3988',
+    partyName: 'Heena Enterprises',
+    partyGstin: '27ABCDE1234F1Z5',
+    placeOfSupply: 'Mumbai',
+    state: 'Maharashtra',
+    stateCode: '27',
+    items: [
+      { particulars: 'Tiles', qty: 69, rate: 600, amount: 41400 },
+      { particulars: 'Wall Border', qty: 12, rate: 140, amount: 1680 }
+    ],
+    subtotal: 43080,
+    cgst: 6,
+    sgst: 6,
+    igst: '',
+    cgstAmt: 2584.8,
+    sgstAmt: 2584.8,
+    igstAmt: '',
+    invoiceTotal: 48249.6,
+    totalInWords: 'Forty Eight Thousand Two Hundred Forty Nine Rupees and Sixty Paise Only'
+  };
+}
