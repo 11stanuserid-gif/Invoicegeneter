@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backup Management | Royal Creation Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+      <div class="page-header with-bg">
+        <div>
+          <h2 class="page-title">Backup Management</h2>
+          <div class="breadcrumb"><a href="dashboard.html">Home</a> / Backup List</div>
+        </div>
+      </div>
+
+      <div class="form-card">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Select Financial Year:</label>
+            <select class="form-control" id="fySelect">
+              <option value="">Select FY (April 1st - March 31st)</option>
+              <option>2024-2025</option><option>2025-2026</option><option>2026-2027</option>
+            </select>
+          </div>
+          <div class="form-group" style="display:flex; gap:10px; align-items:flex-end;">
+            <button class="btn btn-dark" id="exportBackup"><i data-feather="download"></i> Export Backup</button>
+            <button class="btn btn-danger" id="deleteFy"><i data-feather="trash-2"></i> Delete FY All Data</button>
+          </div>
+        </div>
+
+        <div class="form-grid mt-4">
+          <div class="form-group">
+            <label>Import Backup (JSON):</label>
+            <input type="file" class="form-control" id="importFile" accept=".json">
+          </div>
+          <div class="form-group" style="display:flex; align-items:flex-end;">
+            <button class="btn btn-dark btn-block" id="importBtn"><i data-feather="upload-cloud"></i> Import Backup</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-warning">
+        <i data-feather="alert-triangle"></i>
+        <div>
+          <strong>महत्वपूर्ण सूचना:</strong>
+          <ul>
+            <li>बैकअप का उपयोग करने से पहले यह सुनिश्चित करें कि आपका डेटा सुरक्षित है।</li>
+            <li>किसी भी डेटा को डिलीट करने या इम्पोर्ट करने से पहले हमेशा एक नया बैकअप अवश्य बना लें।</li>
+            <li>यदि गलती से डेटा डिलीट या ओवरराइट हो जाता है, तो उसे वापस लाना कठिन हो सकता है।</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="alert alert-info">
+        <i data-feather="info"></i>
+        <div>
+          <strong>Important Note:</strong>
+          <ul>
+            <li>Before using the backup feature, make sure your data is safe and properly stored.</li>
+            <li>Always take a fresh backup before performing any delete or import action.</li>
+            <li>If data is accidentally deleted or overwritten, recovery may not be possible.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { auth, db } from './js/firebase-config.js';
+import { collection, query, where, getDocs, deleteDoc, addDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
+import { authGuard, setupSidebar, showToast, showLoader, hideLoader } from './js/utils.js';
+
+let currentUser;
+
+(async () => {
+  currentUser = await authGuard(auth);
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('backup');
+  document.getElementById('topbar-mount').innerHTML = renderTopbar(currentUser.displayName || 'User');
+  feather.replace();
+  setupSidebar();
+  attachLogout();
+
+  document.getElementById('exportBackup').addEventListener('click', exportBackup);
+  document.getElementById('deleteFy').addEventListener('click', deleteFy);
+  document.getElementById('importBtn').addEventListener('click', importBackup);
+})();
+
+function getFyRange(fy) {
+  if (!fy) return null;
+  const [y1] = fy.split('-');
+  return { from: `${y1}-04-01`, to: `${+y1 + 1}-03-31` };
+}
+
+async function exportBackup() {
+  showLoader();
+  try {
+    const fy = document.getElementById('fySelect').value;
+    const range = getFyRange(fy);
+    const q = query(collection(db, 'invoices'), where('userId', '==', currentUser.uid));
+    const snap = await getDocs(q);
+    let invoices = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    if (range) invoices = invoices.filter(i => i.invoiceDate >= range.from && i.invoiceDate <= range.to);
+    const data = { exportedAt: new Date().toISOString(), fy, invoices };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `backup_${fy || 'all'}_${Date.now()}.json`; a.click();
+    showToast('Backup exported');
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoader(); }
+}
+
+async function deleteFy() {
+  const fy = document.getElementById('fySelect').value;
+  if (!fy) return showToast('Select a financial year', 'error');
+  if (!confirm(`Delete ALL data for FY ${fy}? This cannot be undone.`)) return;
+  showLoader();
+  try {
+    const range = getFyRange(fy);
+    const q = query(collection(db, 'invoices'), where('userId', '==', currentUser.uid));
+    const snap = await getDocs(q);
+    let count = 0;
+    for (const d of snap.docs) {
+      const inv = d.data();
+      if (inv.invoiceDate >= range.from && inv.invoiceDate <= range.to) {
+        await deleteDoc(doc(db, 'invoices', d.id)); count++;
+      }
+    }
+    showToast(`Deleted ${count} records`);
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoader(); }
+}
+
+async function importBackup() {
+  const f = document.getElementById('importFile').files[0];
+  if (!f) return showToast('Choose a backup file', 'error');
+  showLoader();
+  try {
+    const text = await f.text();
+    const data = JSON.parse(text);
+    let count = 0;
+    for (const inv of (data.invoices || [])) {
+      const { id, ...rest } = inv;
+      rest.userId = currentUser.uid;
+      await addDoc(collection(db, 'invoices'), rest);
+      count++;
+    }
+    showToast(`Imported ${count} records`);
+  } catch (e) { showToast('Import failed: ' + e.message, 'error'); }
+  finally { hideLoader(); }
+}
+</script>
+</body>
+</html>
