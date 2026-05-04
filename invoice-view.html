@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice View | Royal Creation Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+<style>
+.toolbar { background:white; padding:14px 22px; border-radius:var(--radius); margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap; box-shadow:var(--shadow-sm); align-items:center; }
+.invoice-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+.invoice-scale {
+  transform-origin: top center;
+  display: inline-block;
+}
+/* Off-screen export stage — captures the invoice at exact 794×1123,
+   never scaled, never affected by viewport. PDF == Preview. */
+#pdfStage {
+  position: fixed;
+  left: -10000px;
+  top: 0;
+  width: 794px;
+  height: 1123px;
+  background: #ffffff;
+  z-index: -1;
+  pointer-events: none;
+}
+@media print {
+  .invoice-wrapper { padding: 0; overflow: visible; }
+  .invoice-scale { transform: none !important; width: auto !important; }
+}
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+      <div class="toolbar no-print">
+        <a href="invoice-list.html" class="btn btn-outline"><i data-feather="arrow-left"></i> Back</a>
+        <button class="btn btn-primary" onclick="window.print()"><i data-feather="printer"></i> Print</button>
+        <button class="btn btn-dark" id="downloadPdf"><i data-feather="download"></i> Download PDF</button>
+        <label style="margin-left:auto; display:flex; align-items:center; gap:8px;">
+          Style:
+          <select id="styleSelect" class="form-control" style="width:auto; padding:8px 12px;">
+            <option value="1">Style 01</option>
+            <option value="2">Style 02</option>
+            <option value="3">Style 03</option>
+            <option value="4">Style 04</option>
+            <option value="5">Style 05</option>
+          </select>
+        </label>
+      </div>
+      <div class="invoice-wrapper"><div class="invoice-scale" id="invoiceContainer"></div></div>
+    </div>
+  </main>
+</div>
+
+<!-- Hidden, off-screen stage where the invoice is rendered at exact A4 px
+     for html2canvas. This guarantees PDF == Preview. -->
+<div id="pdfStage" aria-hidden="true"></div>
+
+<script type="module">
+import { auth, db } from './js/firebase-config.js';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
+import { authGuard, setupSidebar, showToast, showLoader, hideLoader } from './js/utils.js';
+import { renderInvoiceTemplate } from './js/invoice-template.js';
+
+let invoice, company, style = 1;
+
+(async () => {
+  const user = await authGuard(auth);
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('invoice');
+  document.getElementById('topbar-mount').innerHTML = renderTopbar(user.displayName || 'User');
+  feather.replace();
+  setupSidebar();
+  attachLogout();
+
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (!id) { showToast('Invoice ID missing', 'error'); return; }
+
+  showLoader();
+  try {
+    const snap = await getDoc(doc(db, 'invoices', id));
+    if (!snap.exists()) { showToast('Invoice not found', 'error'); return; }
+    invoice = snap.data();
+
+    const cSnap = await getDoc(doc(db, 'company', user.uid));
+    company = cSnap.exists() ? cSnap.data() : {};
+
+    const sSnap = await getDoc(doc(db, 'settings', user.uid));
+    if (sSnap.exists()) style = +sSnap.data().printStyle || 1;
+    document.getElementById('styleSelect').value = style;
+
+    render();
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoader(); }
+
+  document.getElementById('styleSelect').addEventListener('change', e => { style = +e.target.value; render(); });
+  document.getElementById('downloadPdf').addEventListener('click', downloadPDF);
+})();
+
+function render() {
+  document.getElementById('invoiceContainer').innerHTML = renderInvoiceTemplate(style, invoice, company);
+  fitInvoiceToWidth();
+}
+
+function fitInvoiceToWidth() {
+  const scaleEl = document.getElementById('invoiceContainer');
+  const wrapper = scaleEl.parentElement;
+  if (!scaleEl || !wrapper) return;
+  const apply = () => {
+    const available = wrapper.clientWidth - 20;
+    const paperWidth = 794;
+    const ratio = Math.min(1, available / paperWidth);
+    scaleEl.style.transform = `scale(${ratio})`;
+    scaleEl.style.width = paperWidth + 'px';
+    const paperHeight = 1123;
+    wrapper.style.minHeight = (paperHeight * ratio + 20) + 'px';
+  };
+  apply();
+  if (!window.__fitListenerAdded) {
+    window.addEventListener('resize', apply);
+    window.__fitListenerAdded = true;
+  }
+}
+
+async function waitImages(root) {
+  const imgs = root.querySelectorAll('img');
+  await Promise.all([...imgs].map(img => {
+    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
+    return new Promise(res => {
+      img.onload = res;
+      img.onerror = res;
+      // Safety timeout
+      setTimeout(res, 4000);
+    });
+  }));
+  // Allow fonts to settle
+  if (document.fonts && document.fonts.ready) {
+    try { await document.fonts.ready; } catch (e) {}
+  }
+  await new Promise(r => setTimeout(r, 250));
+}
+
+async function downloadPDF() {
+  if (!invoice) return showToast('Nothing to export', 'error');
+  showLoader();
+  showToast('Generating high-quality PDF...');
+
+  // Render a fresh, fully-independent copy of the invoice into the off-screen
+  // stage. Preview is NOT scaled or modified. PDF is captured at native A4 px.
+  const stage = document.getElementById('pdfStage');
+  stage.innerHTML = renderInvoiceTemplate(style, invoice, company);
+  const paper = stage.querySelector('.invoice-paper');
+  if (!paper) { hideLoader(); return showToast('Render failed', 'error'); }
+
+  // Force exact-color rendering & disable transforms during capture
+  paper.classList.add('pdf-export');
+  paper.style.margin = '0';
+  paper.style.boxShadow = 'none';
+  paper.style.transform = 'none';
+
+  try {
+    await waitImages(paper);
+
+    // Capture at 3x device scale (~288 DPI) — sharp PDF, exact same layout.
+    const canvas = await html2canvas(paper, {
+      scale: 3,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      logging: false,
+      imageTimeout: 8000,
+      width: 794,
+      height: 1123,
+      windowWidth: 794,
+      windowHeight: 1123,
+      scrollX: 0,
+      scrollY: 0,
+      // Render the EXACT element on the off-screen stage
+      foreignObjectRendering: false,
+      removeContainer: false
+    });
+
+    const imgData = canvas.toDataURL('image/png', 1.0);
+    const { jsPDF } = window.jspdf;
+    // A4 = 210x297mm exact. Image fills page edge-to-edge — same as preview.
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: true,
+      hotfixes: ['px_scaling']
+    });
+    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+    pdf.save(`invoice_${invoice.invoiceNo || Date.now()}.pdf`);
+    showToast('PDF downloaded');
+  } catch (e) {
+    console.error(e);
+    showToast('PDF failed: ' + e.message, 'error');
+  } finally {
+    stage.innerHTML = '';
+    hideLoader();
+  }
+}
+</script>
+</body>
+</html>
