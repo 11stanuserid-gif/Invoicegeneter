@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Create | Royal Creation Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+      <div class="page-header with-bg">
+        <div>
+          <h2 class="page-title" id="pageTitle">Invoice Create</h2>
+          <div class="breadcrumb"><a href="dashboard.html">Home</a> / Invoice Create</div>
+        </div>
+        <a href="invoice-list.html" class="btn btn-dark"><i data-feather="arrow-left"></i> Back</a>
+      </div>
+
+      <form id="invoiceForm">
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Invoice No</label>
+              <input type="text" class="form-control" id="invoiceNo" placeholder="Enter Invoice No" required>
+            </div>
+            <div class="form-group">
+              <label>Challan No</label>
+              <input type="text" class="form-control" id="challanNo" placeholder="Enter Challan No">
+            </div>
+            <div class="form-group">
+              <label>Invoice Date</label>
+              <input type="date" class="form-control" id="invoiceDate" required>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Vehicle No</label>
+            <input type="text" class="form-control" id="vehicleNo" placeholder="Enter Vehicle No">
+          </div>
+
+          <div class="form-group">
+            <label>Total in Words</label>
+            <textarea class="form-control" id="totalWords" placeholder="Auto-calculated" readonly></textarea>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label>IGST (%)</label>
+              <input type="number" class="form-control gst-input" id="igst" min="0" step="0.01" placeholder="Enter IGST %">
+            </div>
+            <div class="form-group">
+              <label>CGST (%)</label>
+              <input type="number" class="form-control gst-input" id="cgst" min="0" step="0.01" placeholder="Enter CGST %">
+            </div>
+            <div class="form-group">
+              <label>SGST (%)</label>
+              <input type="number" class="form-control gst-input" id="sgst" min="0" step="0.01" placeholder="Enter SGST %">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card" style="background: #f5f7ff;">
+          <h3 class="section-title">Party Details</h3>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Party's GSTIN</label>
+              <input type="text" class="form-control" id="partyGstin" placeholder="Enter Party's GSTIN">
+            </div>
+            <div class="form-group">
+              <label>Party Name / Title</label>
+              <input type="text" class="form-control" id="partyName" placeholder="Enter Name / Title">
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Place of Supply</label>
+              <input type="text" class="form-control" id="placeOfSupply" placeholder="Enter Place of Supply">
+            </div>
+            <div class="form-group">
+              <label>State</label>
+              <select class="form-control" id="state">
+                <option value="">Select State</option>
+                <option>Andhra Pradesh</option><option>Arunachal Pradesh</option><option>Assam</option>
+                <option>Bihar</option><option>Chhattisgarh</option><option>Goa</option><option>Gujarat</option>
+                <option>Haryana</option><option>Himachal Pradesh</option><option>Jharkhand</option>
+                <option>Karnataka</option><option>Kerala</option><option>Madhya Pradesh</option>
+                <option>Maharashtra</option><option>Manipur</option><option>Meghalaya</option>
+                <option>Mizoram</option><option>Nagaland</option><option>Odisha</option><option>Punjab</option>
+                <option>Rajasthan</option><option>Sikkim</option><option>Tamil Nadu</option><option>Telangana</option>
+                <option>Tripura</option><option>Uttar Pradesh</option><option>Uttarakhand</option>
+                <option>West Bengal</option><option>Delhi</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>State Code</label>
+              <input type="text" class="form-control" id="stateCode" placeholder="Enter State Code">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-card">
+          <h3 class="section-title">Receiver's Signature <small style="text-transform:none; color:var(--gray); font-weight:400;">(Background auto-removed)</small></h3>
+          <label class="upload-box" for="signFile">
+            <i data-feather="upload-cloud"></i>
+            <p>Click to upload signature</p>
+            <small>JPG, PNG or JPEG (Max. 2MB)</small>
+            <input type="file" id="signFile" accept="image/*" hidden>
+          </label>
+          <p id="signFileName" class="mt-2" style="font-size:13px; color:var(--gray);"></p>
+          <img id="signPrev" style="max-height:80px; margin-top:8px; display:none; background: #f1f5f9; padding: 6px; border-radius: 6px;">
+        </div>
+
+        <div class="form-card">
+          <h3 class="section-title">Particulars / Items</h3>
+          <div style="overflow-x:auto;">
+          <table class="items-table">
+            <thead>
+              <tr><th style="width:60px">Sr No</th><th>Particulars</th><th style="width:100px">Qty</th><th style="width:120px">Rate</th><th style="width:140px">Amount</th><th style="width:60px">Action</th></tr>
+            </thead>
+            <tbody id="itemsBody"></tbody>
+          </table>
+          </div>
+          <button type="button" class="btn btn-dark mt-4" id="addRow"><i data-feather="plus-circle"></i> Add Row</button>
+
+          <div style="margin-top: 22px; padding: 18px; background: var(--light-gray); border-radius: 8px;">
+            <div style="display:flex; justify-content: space-between; padding: 4px 0;"><strong>Subtotal:</strong> <span>₹ <span id="subtotal"></span></span></div>
+            <div style="display:flex; justify-content: space-between; padding: 4px 0;">SGST: <span>₹ <span id="sgstAmt"></span></span></div>
+            <div style="display:flex; justify-content: space-between; padding: 4px 0;">CGST: <span>₹ <span id="cgstAmt"></span></span></div>
+            <div style="display:flex; justify-content: space-between; padding: 4px 0;">IGST: <span>₹ <span id="igstAmt"></span></span></div>
+            <hr style="margin: 10px 0; border-color: #cbd5e1;">
+            <div style="display:flex; justify-content: space-between; padding: 4px 0; font-size: 18px; color: var(--primary);"><strong>Invoice Total:</strong> <strong>₹ <span id="invoiceTotal"></span></strong></div>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px;">
+          <button type="submit" class="btn btn-dark"><i data-feather="save"></i> Submit</button>
+          <a href="invoice-list.html" class="btn btn-outline"><i data-feather="arrow-left"></i> Back</a>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { auth, db } from './js/firebase-config.js';
+import { collection, addDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
+import { authGuard, setupSidebar, showToast, showLoader, hideLoader, numberToWords, formatINR, removeBackground } from './js/utils.js';
+
+let currentUser, editId = null, signFileURL = '';
+
+function getNumberOrBlank(inputOrValue) {
+  const raw = typeof inputOrValue === 'string'
+    ? inputOrValue
+    : (inputOrValue?.value ?? '');
+  const value = String(raw).trim();
+  if (value === '') return '';
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : '';
+}
+
+function setText(id, value) {
+  document.getElementById(id).textContent = value;
+}
+
+function setAmountForRow(tr) {
+  const qtyInput = tr.querySelector('.qty');
+  const rateInput = tr.querySelector('.rate');
+  const amountInput = tr.querySelector('.amount');
+  const qtyRaw = qtyInput.value.trim();
+  const rateRaw = rateInput.value.trim();
+
+  if (qtyRaw === '' && rateRaw === '') {
+    amountInput.value = '';
+    return;
+  }
+
+  const qty = Number(qtyRaw || 0);
+  const rate = Number(rateRaw || 0);
+  amountInput.value = (qty * rate).toFixed(2);
+}
+
+(async () => {
+  currentUser = await authGuard(auth);
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('invoice');
+  document.getElementById('topbar-mount').innerHTML = renderTopbar(currentUser.displayName || currentUser.email.split('@')[0]);
+  feather.replace();
+  setupSidebar();
+  attachLogout();
+
+  addItemRow();
+
+  const params = new URLSearchParams(location.search);
+  if (params.get('id')) {
+    editId = params.get('id');
+    document.getElementById('pageTitle').textContent = 'Invoice Edit';
+    await loadInvoice(editId);
+  }
+
+  document.getElementById('addRow').addEventListener('click', () => addItemRow());
+  document.querySelectorAll('.gst-input').forEach(el => el.addEventListener('input', recalc));
+  document.getElementById('signFile').addEventListener('change', async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.size > 2 * 1024 * 1024) { showToast('Max 2MB', 'error'); return; }
+    document.getElementById('signFileName').textContent = `Selected: ${f.name}`;
+    showLoader();
+    try {
+      signFileURL = await removeBackground(f);
+      const prev = document.getElementById('signPrev');
+      prev.src = signFileURL;
+      prev.style.display = 'inline-block';
+      showToast('Signature added (background removed)');
+    } catch (er) { showToast(er.message, 'error'); }
+    finally { hideLoader(); }
+  });
+  document.getElementById('invoiceForm').addEventListener('submit', saveInvoice);
+})();
+
+function addItemRow(item = {}) {
+  const tbody = document.getElementById('itemsBody');
+  const idx = tbody.children.length + 1;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${idx}</td>
+    <td><input type="text" class="particulars" value="${item.particulars ?? ''}" placeholder="Enter Particulars"></td>
+    <td><input type="number" class="qty" value="${item.qty ?? ''}" min="0" step="0.01" placeholder="Qty"></td>
+    <td><input type="number" class="rate" value="${item.rate ?? ''}" min="0" step="0.01" placeholder="Rate"></td>
+    <td><input type="number" class="amount" value="${item.amount ?? ''}" readonly placeholder="Amount"></td>
+    <td><button type="button" class="del-row"><i data-feather="trash-2"></i></button></td>
+  `;
+  tbody.appendChild(tr);
+  tr.querySelector('.del-row').addEventListener('click', () => { tr.remove(); reindexRows(); recalc(); });
+  ['qty', 'rate'].forEach(c => tr.querySelector('.' + c).addEventListener('input', () => {
+    setAmountForRow(tr);
+    recalc();
+  }));
+  setAmountForRow(tr);
+  feather.replace();
+}
+
+function reindexRows() {
+  document.querySelectorAll('#itemsBody tr').forEach((tr, i) => tr.children[0].textContent = i + 1);
+}
+
+function recalc() {
+  let subtotal = 0;
+  let hasItemData = false;
+
+  document.querySelectorAll('#itemsBody tr').forEach(tr => {
+    const particulars = tr.querySelector('.particulars').value.trim();
+    const qtyRaw = tr.querySelector('.qty').value.trim();
+    const rateRaw = tr.querySelector('.rate').value.trim();
+    const amountRaw = tr.querySelector('.amount').value.trim();
+
+    if (particulars || qtyRaw || rateRaw || amountRaw) hasItemData = true;
+    subtotal += Number(amountRaw || 0);
+  });
+
+  const cgstRaw = document.getElementById('cgst').value.trim();
+  const sgstRaw = document.getElementById('sgst').value.trim();
+  const igstRaw = document.getElementById('igst').value.trim();
+
+  const cgstRate = cgstRaw === '' ? 0 : Number(cgstRaw);
+  const sgstRate = sgstRaw === '' ? 0 : Number(sgstRaw);
+  const igstRate = igstRaw === '' ? 0 : Number(igstRaw);
+
+  const cgstAmt = subtotal * cgstRate / 100;
+  const sgstAmt = subtotal * sgstRate / 100;
+  const igstAmt = subtotal * igstRate / 100;
+  const total = subtotal + cgstAmt + sgstAmt + igstAmt;
+  const hasAnyData = hasItemData || cgstRaw !== '' || sgstRaw !== '' || igstRaw !== '';
+
+  setText('subtotal', hasItemData ? formatINR(subtotal) : '');
+  setText('cgstAmt', cgstRaw !== '' ? formatINR(cgstAmt) : '');
+  setText('sgstAmt', sgstRaw !== '' ? formatINR(sgstAmt) : '');
+  setText('igstAmt', igstRaw !== '' ? formatINR(igstAmt) : '');
+  setText('invoiceTotal', hasAnyData ? formatINR(total) : '');
+  document.getElementById('totalWords').value = hasAnyData ? numberToWords(total) : '';
+}
+
+async function loadInvoice(id) {
+  showLoader();
+  try {
+    const snap = await getDoc(doc(db, 'invoices', id));
+    if (!snap.exists()) { showToast('Not found', 'error'); return; }
+    const inv = snap.data();
+    document.getElementById('invoiceNo').value = inv.invoiceNo || '';
+    document.getElementById('challanNo').value = inv.challanNo || '';
+    document.getElementById('invoiceDate').value = inv.invoiceDate || '';
+    document.getElementById('vehicleNo').value = inv.vehicleNo || '';
+    document.getElementById('partyGstin').value = inv.partyGstin || '';
+    document.getElementById('partyName').value = inv.partyName || '';
+    document.getElementById('placeOfSupply').value = inv.placeOfSupply || '';
+    document.getElementById('state').value = inv.state || '';
+    document.getElementById('stateCode').value = inv.stateCode || '';
+    document.getElementById('cgst').value = inv.cgst ?? '';
+    document.getElementById('sgst').value = inv.sgst ?? '';
+    document.getElementById('igst').value = inv.igst ?? '';
+    signFileURL = inv.signatureUrl || '';
+    if (signFileURL) {
+      const prev = document.getElementById('signPrev');
+      prev.src = signFileURL;
+      prev.style.display = 'inline-block';
+    }
+    document.getElementById('itemsBody').innerHTML = '';
+    (inv.items || []).forEach(it => addItemRow(it));
+    if (!inv.items?.length) addItemRow();
+    recalc();
+  } catch (e) { showToast(e.message, 'error'); }
+  finally { hideLoader(); }
+}
+
+async function saveInvoice(e) {
+  e.preventDefault();
+  showLoader();
+  try {
+    const items = [...document.querySelectorAll('#itemsBody tr')].map(tr => ({
+      particulars: tr.querySelector('.particulars').value.trim(),
+      qty: getNumberOrBlank(tr.querySelector('.qty')),
+      rate: getNumberOrBlank(tr.querySelector('.rate')),
+      amount: getNumberOrBlank(tr.querySelector('.amount'))
+    })).filter(it => it.particulars || it.qty !== '' || it.rate !== '' || it.amount !== '');
+    const subtotalValue = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+    const cgst = getNumberOrBlank(document.getElementById('cgst'));
+    const sgst = getNumberOrBlank(document.getElementById('sgst'));
+    const igst = getNumberOrBlank(document.getElementById('igst'));
+    const cgstAmt = cgst === '' ? '' : subtotalValue * cgst / 100;
+    const sgstAmt = sgst === '' ? '' : subtotalValue * sgst / 100;
+    const igstAmt = igst === '' ? '' : subtotalValue * igst / 100;
+    const total = subtotalValue + (cgstAmt === '' ? 0 : cgstAmt) + (sgstAmt === '' ? 0 : sgstAmt) + (igstAmt === '' ? 0 : igstAmt);
+    const hasTotals = items.length || cgst !== '' || sgst !== '' || igst !== '';
+    const data = {
+      userId: currentUser.uid,
+      invoiceNo: document.getElementById('invoiceNo').value,
+      challanNo: document.getElementById('challanNo').value,
+      invoiceDate: document.getElementById('invoiceDate').value,
+      vehicleNo: document.getElementById('vehicleNo').value,
+      partyGstin: document.getElementById('partyGstin').value,
+      partyName: document.getElementById('partyName').value,
+      placeOfSupply: document.getElementById('placeOfSupply').value,
+      state: document.getElementById('state').value,
+      stateCode: document.getElementById('stateCode').value,
+      cgst, sgst, igst,
+      cgstAmt, sgstAmt, igstAmt,
+      subtotal: items.length ? subtotalValue : '',
+      invoiceTotal: hasTotals ? total : '',
+      totalInWords: hasTotals ? numberToWords(total) : '',
+      items,
+      signatureUrl: signFileURL,
+      updatedAt: new Date().toISOString()
+    };
+    if (editId) {
+      await updateDoc(doc(db, 'invoices', editId), data);
+      showToast('Invoice updated');
+    } else {
+      data.createdAt = new Date().toISOString();
+      await addDoc(collection(db, 'invoices'), data);
+      showToast('Invoice created');
+    }
+    setTimeout(() => location.href = 'invoice-list.html', 700);
+  } catch (er) { showToast(er.message, 'error'); }
+  finally { hideLoader(); }
+}
+</script>
+</body>
+</html>
