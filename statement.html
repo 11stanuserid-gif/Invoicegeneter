@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statement | Royal Creation Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+      <div class="page-header">
+        <div>
+          <h2 class="page-title">Statement List</h2>
+          <div class="breadcrumb"><a href="dashboard.html">Home</a> / Statement List</div>
+        </div>
+        <button class="btn btn-dark" id="exportExcel"><i data-feather="download"></i> Export Excel</button>
+      </div>
+
+      <div class="filter-card">
+        <div class="form-grid">
+          <div class="form-group"><label>From Date</label><input type="date" class="form-control" id="fromDate"></div>
+          <div class="form-group"><label>To Date</label><input type="date" class="form-control" id="toDate"></div>
+          <div class="form-group"><label>Party Name</label><select class="form-control" id="partyName"><option value="">Select Party Name</option></select></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="submitFilter"><i data-feather="search"></i> Submit</button>
+          <button class="btn btn-outline" id="resetFilter"><i data-feather="refresh-cw"></i> Reset</button>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-toolbar">
+          <div class="entries-select"><select id="perPage"><option>5</option><option>10</option><option>25</option></select><span>entries per page</span></div>
+          <div class="search-input"><i data-feather="search"></i><input type="text" id="searchInput" placeholder="Search..."></div>
+        </div>
+        <div class="table-wrap">
+        <table>
+          <thead><tr><th>No.</th><th>Date</th><th>Invoice No.</th><th>Vehicle No.</th><th>Particulars</th><th>Qty</th><th>Rate (₹)</th><th>Total Amount (₹)</th></tr></thead>
+          <tbody id="stmtTbody"></tbody>
+        </table>
+        </div>
+        <div class="pagination">
+          <div class="pagination-info" id="pageInfo">Showing 0 to 0 of 0 entries</div>
+          <div class="pagination-controls" id="pageControls"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { auth, db } from './js/firebase-config.js';
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
+import { authGuard, setupSidebar, showToast, formatINR, formatDate } from './js/utils.js';
+
+let allRows = [], filtered = [], currentPage = 1, perPage = 5, currentUser;
+
+(async () => {
+  currentUser = await authGuard(auth);
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('statement');
+  document.getElementById('topbar-mount').innerHTML = renderTopbar(currentUser.displayName || currentUser.email.split('@')[0]);
+  feather.replace();
+  setupSidebar();
+  attachLogout();
+  await loadAll();
+
+  document.getElementById('submitFilter').addEventListener('click', applyFilter);
+  document.getElementById('resetFilter').addEventListener('click', resetFilter);
+  document.getElementById('perPage').addEventListener('change', e => { perPage = +e.target.value; currentPage = 1; render(); });
+  document.getElementById('searchInput').addEventListener('input', e => {
+    const q = e.target.value.toLowerCase();
+    filtered = allRows.filter(r => Object.values(r).some(v => String(v).toLowerCase().includes(q)));
+    currentPage = 1; render();
+  });
+  document.getElementById('exportExcel').addEventListener('click', exportCSV);
+})();
+
+async function loadAll() {
+  const q = query(collection(db, 'invoices'), where('userId', '==', currentUser.uid));
+  const snap = await getDocs(q);
+  const partyDropdown = document.getElementById('partyName');
+  const parties = new Set();
+  allRows = [];
+  snap.forEach(d => {
+    const inv = d.data();
+    parties.add(inv.partyName || '');
+    (inv.items || []).forEach(it => {
+      allRows.push({ date: inv.invoiceDate, invoiceNo: inv.invoiceNo, vehicleNo: inv.vehicleNo, particulars: it.particulars, qty: it.qty, rate: it.rate, amount: it.amount, partyName: inv.partyName });
+    });
+  });
+  parties.forEach(p => { if (p) partyDropdown.innerHTML += `<option>${p}</option>`; });
+  filtered = [...allRows]; render();
+}
+
+function applyFilter() {
+  const from = document.getElementById('fromDate').value;
+  const to = document.getElementById('toDate').value;
+  const party = document.getElementById('partyName').value;
+  filtered = allRows.filter(r => {
+    if (from && r.date < from) return false;
+    if (to && r.date > to) return false;
+    if (party && r.partyName !== party) return false;
+    return true;
+  });
+  currentPage = 1; render();
+}
+
+function resetFilter() {
+  document.getElementById('fromDate').value = '';
+  document.getElementById('toDate').value = '';
+  document.getElementById('partyName').value = '';
+  filtered = [...allRows]; currentPage = 1; render();
+}
+
+function render() {
+  const tbody = document.getElementById('stmtTbody');
+  if (!filtered.length) {
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i data-feather="file-text"></i><h4>No statement found</h4><p>Please select date range and party name to view statement.</p></div></td></tr>`;
+    document.getElementById('pageInfo').textContent = 'Showing 0 to 0 of 0 entries';
+    document.getElementById('pageControls').innerHTML = '<button>‹</button><button class="active">1</button><button>›</button>';
+    feather.replace(); return;
+  }
+  const start = (currentPage - 1) * perPage;
+  const end = Math.min(start + perPage, filtered.length);
+  tbody.innerHTML = filtered.slice(start, end).map((r, i) => `
+    <tr><td>${start + i + 1}</td><td>${formatDate(r.date)}</td><td>${r.invoiceNo || '-'}</td><td>${r.vehicleNo || '-'}</td><td>${r.particulars || '-'}</td><td>${r.qty}</td><td>${formatINR(r.rate)}</td><td>${formatINR(r.amount)}</td></tr>
+  `).join('');
+  document.getElementById('pageInfo').textContent = `Showing ${start + 1} to ${end} of ${filtered.length} entries`;
+  const pages = Math.ceil(filtered.length / perPage);
+  let html = `<button onclick="window.gotoPage(${currentPage - 1})">‹</button>`;
+  for (let i = 1; i <= pages; i++) html += `<button onclick="window.gotoPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+  html += `<button onclick="window.gotoPage(${currentPage + 1})">›</button>`;
+  document.getElementById('pageControls').innerHTML = html;
+  feather.replace();
+}
+
+window.gotoPage = (p) => { if (p < 1) return; const max = Math.ceil(filtered.length / perPage); if (p > max) return; currentPage = p; render(); };
+
+function exportCSV() {
+  if (!filtered.length) return showToast('No data', 'error');
+  const headers = ['No.', 'Date', 'Invoice No.', 'Vehicle No.', 'Particulars', 'Qty', 'Rate', 'Amount'];
+  const rows = filtered.map((r, i) => [i + 1, r.date, r.invoiceNo, r.vehicleNo, r.particulars, r.qty, r.rate, r.amount]);
+  const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'statement.csv'; a.click();
+  showToast('Exported');
+}
+</script>
+</body>
+</html>
