@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Setting | Royal Creation Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
+<link rel="stylesheet" href="css/style.css">
+<style>
+.preview-area {
+  background: #f8fafc; border-radius: 10px; padding: 20px; margin-top: 20px;
+  display: flex; justify-content: center; overflow-x: auto;
+}
+@media (max-width: 900px) {
+  .preview-area .invoice-paper { transform: scale(0.45); transform-origin: top left; margin-bottom: -55%; }
+}
+</style>
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+      <div class="page-header with-bg">
+        <div>
+          <h2 class="page-title">Invoice Setting Edit</h2>
+          <div class="breadcrumb"><a href="dashboard.html">Home</a> / Invoice Setting Edit</div>
+        </div>
+        <a href="dashboard.html" class="btn btn-dark"><i data-feather="arrow-left"></i> Back</a>
+      </div>
+
+      <form id="settingForm" class="form-card">
+        <div class="form-group">
+          <label>Select Invoice Print Style</label>
+          <select class="form-control" id="styleSelect" style="max-width: 240px;">
+            <option value="1">Style 01</option>
+            <option value="2">Style 02</option>
+            <option value="3">Style 03</option>
+            <option value="4">Style 04</option>
+            <option value="5">Style 05</option>
+          </select>
+        </div>
+
+        <label>Invoice Print Style Preview</label>
+        <div class="style-thumbs" id="styleThumbs"></div>
+
+        <div class="toggle-row" style="margin-top: 20px;">
+          <div class="toggle-switch active" id="termsToggle"></div>
+          <span>Term & Condition add in Last Page</span>
+        </div>
+        <p style="font-size:13px; color:var(--gray);" id="lastEdited">Note : Last Edited by User</p>
+
+        <div style="display:flex; gap:10px; margin-top:18px;">
+          <button type="button" class="btn btn-primary" id="previewBtn"><i data-feather="eye"></i> Preview</button>
+          <button type="submit" class="btn btn-dark"><i data-feather="save"></i> Update Setting</button>
+        </div>
+      </form>
+
+      <div class="form-card">
+        <h3 class="section-title">Style Preview (<span id="stylePrevLbl" style="color:var(--primary)">Style-01</span>)</h3>
+        <div class="preview-area" id="previewArea"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { auth, db } from './js/firebase-config.js';
+import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
+import { authGuard, setupSidebar, showToast, showLoader, hideLoader } from './js/utils.js';
+import { renderInvoiceTemplate, getDemoInvoice } from './js/invoice-template.js';
+
+let currentUser, terms = true, currentStyle = 1, company = {};
+
+(async () => {
+  currentUser = await authGuard(auth);
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('');
+  document.getElementById('topbar-mount').innerHTML = renderTopbar(currentUser.displayName || 'User');
+  feather.replace();
+  setupSidebar();
+  attachLogout();
+
+  try {
+    const cSnap = await getDoc(doc(db, 'company', currentUser.uid));
+    if (cSnap.exists()) company = cSnap.data();
+  } catch (e) {}
+
+  try {
+    const snap = await getDoc(doc(db, 'settings', currentUser.uid));
+    if (snap.exists()) {
+      const s = snap.data();
+      currentStyle = +s.printStyle || 1;
+      if (s.terms === false) { terms = false; document.getElementById('termsToggle').classList.remove('active'); }
+      if (s.lastEditedBy) document.getElementById('lastEdited').textContent = `Note : Last Edited by ${s.lastEditedBy}`;
+    }
+  } catch (e) {}
+
+  document.getElementById('styleSelect').value = currentStyle;
+  renderThumbnails();
+  renderPreview();
+
+  document.getElementById('styleSelect').addEventListener('change', e => {
+    currentStyle = +e.target.value;
+    selectThumb(currentStyle);
+    renderPreview();
+  });
+  document.getElementById('termsToggle').addEventListener('click', e => {
+    terms = !terms;
+    e.currentTarget.classList.toggle('active');
+  });
+  document.getElementById('previewBtn').addEventListener('click', () => {
+    sessionStorage.setItem('previewStyle', currentStyle);
+    window.open('preview.html?style=' + currentStyle, '_blank');
+  });
+  document.getElementById('settingForm').addEventListener('submit', save);
+})();
+
+function renderThumbnails() {
+  const container = document.getElementById('styleThumbs');
+  const demo = getDemoInvoice();
+  container.innerHTML = [1,2,3,4,5].map(n => `
+    <label class="style-thumb ${n === currentStyle ? 'selected' : ''}" data-style="${n}">
+      <div class="thumb-img" id="thumb-${n}"></div>
+      <span>Style-0${n}</span>
+    </label>
+  `).join('');
+
+  [1,2,3,4,5].forEach(n => {
+    const div = document.getElementById(`thumb-${n}`);
+    if (!div) return;
+    const inner = document.createElement('div');
+    inner.innerHTML = renderInvoiceTemplate(n, demo, company);
+    inner.style.transform = 'scale(0.21)';
+    inner.style.transformOrigin = 'top left';
+    inner.style.width = '794px';
+    inner.style.position = 'absolute';
+    inner.style.top = '0';
+    inner.style.left = '0';
+    div.innerHTML = '';
+    div.appendChild(inner);
+  });
+
+  document.querySelectorAll('.style-thumb').forEach(t => {
+    t.addEventListener('click', (e) => {
+      e.preventDefault();
+      const n = +t.dataset.style;
+      currentStyle = n;
+      document.getElementById('styleSelect').value = n;
+      selectThumb(n);
+      renderPreview();
+    });
+  });
+}
+
+function selectThumb(n) {
+  document.querySelectorAll('.style-thumb').forEach(t => {
+    t.classList.toggle('selected', +t.dataset.style === n);
+  });
+  document.getElementById('stylePrevLbl').textContent = `Style-0${n}`;
+}
+
+function renderPreview() {
+  const demo = getDemoInvoice();
+  document.getElementById('previewArea').innerHTML = renderInvoiceTemplate(currentStyle, demo, company);
+}
+
+async function save(e) {
+  e.preventDefault();
+  showLoader();
+  try {
+    await setDoc(doc(db, 'settings', currentUser.uid), {
+      printStyle: String(currentStyle),
+      terms,
+      lastEditedBy: currentUser.displayName || 'User',
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+    showToast('Setting updated');
+  } catch (er) { showToast(er.message, 'error'); }
+  finally { hideLoader(); }
+}
+</script>
+</body>
+</html>
