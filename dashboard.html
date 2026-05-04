@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard | Royal Creation Billing</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/feather-icons"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+    <div id="topbar-mount"></div>
+    <div class="page-content">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div>
+            <div class="stat-label">Today's Invoice</div>
+            <div class="stat-value" id="todayCount">0</div>
+            <div class="stat-compare"><span id="yesterdayCount">0</span> Yesterday</div>
+          </div>
+          <div class="stat-circle purple"></div>
+        </div>
+        <div class="stat-card">
+          <div>
+            <div class="stat-label">This Month</div>
+            <div class="stat-value" id="monthCount">0</div>
+            <div class="stat-compare"><span id="lastMonthCount">0</span> Last Month</div>
+          </div>
+          <div class="stat-circle orange"></div>
+        </div>
+        <div class="stat-card">
+          <div>
+            <div class="stat-label">Total Invoice</div>
+            <div class="stat-value" id="totalCount">0</div>
+          </div>
+          <div class="stat-circle green"></div>
+        </div>
+      </div>
+
+      <div class="action-grid">
+        <a href="invoice-list.html" class="action-card">
+          <i data-feather="file-text"></i>
+          <h4>Invoice Management</h4>
+        </a>
+        <a href="statement.html" class="action-card">
+          <i data-feather="list"></i>
+          <h4>Invoice Statement</h4>
+        </a>
+        <a href="help.html" class="action-card help-card">
+          <div class="icon-circle"><i data-feather="help-circle"></i></div>
+          <h4>Help/Support</h4>
+        </a>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script type="module">
+import { auth, db } from './js/firebase-config.js';
+import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
+import { authGuard, setupSidebar } from './js/utils.js';
+
+(async () => {
+  const user = await authGuard(auth);
+  document.getElementById('sidebar-mount').innerHTML = renderSidebar('dashboard');
+  document.getElementById('topbar-mount').innerHTML = renderTopbar(user.displayName || user.email.split('@')[0]);
+  feather.replace();
+  setupSidebar();
+  attachLogout();
+
+  try {
+    const q = query(collection(db, 'invoices'), where('userId', '==', user.uid));
+    const snap = await getDocs(q);
+    const today = new Date(); today.setHours(0,0,0,0);
+    const yesterday = new Date(today); yesterday.setDate(yesterday.getDate() - 1);
+    const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+    let todayCount = 0, yCount = 0, mCount = 0, lmCount = 0, total = 0;
+    snap.forEach(d => {
+      const inv = d.data();
+      const dt = new Date(inv.invoiceDate || inv.createdAt);
+      total++;
+      if (dt >= today) todayCount++;
+      if (dt >= yesterday && dt < today) yCount++;
+      if (dt >= monthStart) mCount++;
+      if (dt >= lastMonthStart && dt <= lastMonthEnd) lmCount++;
+    });
+    document.getElementById('todayCount').textContent = todayCount;
+    document.getElementById('yesterdayCount').textContent = yCount;
+    document.getElementById('monthCount').textContent = mCount;
+    document.getElementById('lastMonthCount').textContent = lmCount;
+    document.getElementById('totalCount').textContent = total;
+  } catch (e) { console.log(e); }
+})();
+</script>
+</body>
+</html>
