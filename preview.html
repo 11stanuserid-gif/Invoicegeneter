@@ -3,50 +3,30 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Style Preview | Royal Creation Billing</title>
+<title>Standard Layout Preview</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 <style>
-html, body { width: 100%; overflow-x: hidden; }
-body { background: #f1f5f9; padding: 0; margin: 0; }
-.preview-toolbar { background: white; padding: 12px 18px; border-radius: 10px; display:flex; gap:10px; flex-wrap:wrap; max-width: 850px; margin: 14px auto; box-shadow: 0 1px 2px rgba(0,0,0,0.05); align-items:center; }
-.invoice-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 10px;
-  width: 100%;
-  box-sizing: border-box;
-}
-.invoice-scale {
-  transform-origin: top center;
-  display: inline-block;
-}
-@media print {
-  .preview-toolbar { display: none !important; }
-  body { background: white; padding: 0; }
-  .invoice-wrapper { padding: 0; }
-  .invoice-scale { transform: none !important; }
-}
+body { background:#f1f5f9; padding:20px; }
+.preview-toolbar { background:white; padding:14px 22px; border-radius:12px; margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap; max-width:850px; margin:0 auto 20px; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+.invoice-wrapper { display:flex; justify-content:center; padding:20px 0; overflow:hidden; }
+.preview-stage { width:794px; }
+@media print { .preview-toolbar { display:none !important; } body { background:white; padding:0; } }
+@media (max-width:900px) { .preview-stage { transform:scale(0.46); transform-origin:top center; height:516px; } }
 </style>
 </head>
 <body>
 <div class="preview-toolbar">
   <a href="invoice-setting.html" class="btn btn-outline">← Back</a>
   <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
-  <span style="margin-left:auto; align-self:center; font-weight:600;">Style Preview - <span id="lblStyle"></span></span>
+  <span style="margin-left:auto; align-self:center; font-weight:600;">Standard Royal Creation Layout</span>
 </div>
-<div class="invoice-wrapper"><div class="invoice-scale" id="container"></div></div>
-
+<div class="invoice-wrapper" id="container"></div>
 <script type="module">
 import { auth, db } from './js/firebase-config.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { renderInvoiceTemplate, getDemoInvoice } from './js/invoice-template.js';
-
-const params = new URLSearchParams(location.search);
-const style = +params.get('style') || +sessionStorage.getItem('previewStyle') || 1;
-document.getElementById('lblStyle').textContent = `Style-0${style}`;
 
 onAuthStateChanged(auth, async (user) => {
   let company = {};
@@ -56,27 +36,8 @@ onAuthStateChanged(auth, async (user) => {
       if (snap.exists()) company = snap.data();
     } catch (e) {}
   }
-  document.getElementById('container').innerHTML = renderInvoiceTemplate(style, getDemoInvoice(), company);
-  fitInvoiceToWidth();
+  document.getElementById('container').innerHTML = `<div class="preview-stage">${renderInvoiceTemplate(1, getDemoInvoice(), company)}</div>`;
 });
-
-function fitInvoiceToWidth() {
-  const scaleEl = document.getElementById('container');
-  const wrapper = scaleEl.parentElement;
-  if (!scaleEl || !wrapper) return;
-  const apply = () => {
-    const available = wrapper.clientWidth - 20;
-    const paperWidth = 794;
-    const ratio = Math.min(1, available / paperWidth);
-    scaleEl.style.transform = `scale(${ratio})`;
-    scaleEl.style.width = paperWidth + 'px';
-    // Keep wrapper height correct after scaling
-    const paperHeight = 1123;
-    wrapper.style.minHeight = (paperHeight * ratio + 20) + 'px';
-  };
-  apply();
-  window.addEventListener('resize', apply);
-}
 </script>
 </body>
 </html>
