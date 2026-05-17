@@ -25,62 +25,27 @@
       <form id="invoiceForm">
         <div class="form-card">
           <div class="form-grid">
-            <div class="form-group">
-              <label>Invoice No</label>
-              <input type="text" class="form-control" id="invoiceNo" placeholder="Enter Invoice No" required>
-            </div>
-            <div class="form-group">
-              <label>Challan No</label>
-              <input type="text" class="form-control" id="challanNo" placeholder="Enter Challan No">
-            </div>
-            <div class="form-group">
-              <label>Invoice Date</label>
-              <input type="date" class="form-control" id="invoiceDate" required>
-            </div>
+            <div class="form-group"><label>Invoice No</label><input type="text" class="form-control" id="invoiceNo" placeholder="Enter Invoice No" required></div>
+            <div class="form-group"><label>Challan No</label><input type="text" class="form-control" id="challanNo" placeholder="Enter Challan No"></div>
+            <div class="form-group"><label>Invoice Date</label><input type="date" class="form-control" id="invoiceDate" required></div>
           </div>
-          <div class="form-group">
-            <label>Vehicle No</label>
-            <input type="text" class="form-control" id="vehicleNo" placeholder="Enter Vehicle No">
-          </div>
-
-          <div class="form-group">
-            <label>Total in Words</label>
-            <textarea class="form-control" id="totalWords" placeholder="Auto-calculated" readonly></textarea>
-          </div>
-
+          <div class="form-group"><label>Vehicle No</label><input type="text" class="form-control" id="vehicleNo" placeholder="Enter Vehicle No"></div>
+          <div class="form-group"><label>Total in Words</label><textarea class="form-control" id="totalWords" placeholder="Auto-calculated" readonly></textarea></div>
           <div class="form-grid">
-            <div class="form-group">
-              <label>IGST (%)</label>
-              <input type="number" class="form-control gst-input" id="igst" min="0" step="0.01" placeholder="Enter IGST %">
-            </div>
-            <div class="form-group">
-              <label>CGST (%)</label>
-              <input type="number" class="form-control gst-input" id="cgst" min="0" step="0.01" placeholder="Enter CGST %">
-            </div>
-            <div class="form-group">
-              <label>SGST (%)</label>
-              <input type="number" class="form-control gst-input" id="sgst" min="0" step="0.01" placeholder="Enter SGST %">
-            </div>
+            <div class="form-group"><label>IGST (%)</label><input type="number" class="form-control gst-input" id="igst" placeholder="0" min="0" step="0.01"></div>
+            <div class="form-group"><label>CGST (%)</label><input type="number" class="form-control gst-input" id="cgst" placeholder="0" min="0" step="0.01"></div>
+            <div class="form-group"><label>SGST (%)</label><input type="number" class="form-control gst-input" id="sgst" placeholder="0" min="0" step="0.01"></div>
           </div>
         </div>
 
         <div class="form-card" style="background: #f5f7ff;">
           <h3 class="section-title">Party Details</h3>
           <div class="form-grid">
-            <div class="form-group">
-              <label>Party's GSTIN</label>
-              <input type="text" class="form-control" id="partyGstin" placeholder="Enter Party's GSTIN">
-            </div>
-            <div class="form-group">
-              <label>Party Name / Title</label>
-              <input type="text" class="form-control" id="partyName" placeholder="Enter Name / Title">
-            </div>
+            <div class="form-group"><label>Party's GSTIN</label><input type="text" class="form-control" id="partyGstin" placeholder="Enter Party's GSTIN"></div>
+            <div class="form-group"><label>Party Name</label><input type="text" class="form-control" id="partyName" placeholder="Enter Name / Title"></div>
           </div>
           <div class="form-grid">
-            <div class="form-group">
-              <label>Place of Supply</label>
-              <input type="text" class="form-control" id="placeOfSupply" placeholder="Enter Place of Supply">
-            </div>
+            <div class="form-group"><label>Place of Supply</label><input type="text" class="form-control" id="placeOfSupply" placeholder="Enter Place of Supply"></div>
             <div class="form-group">
               <label>State</label>
               <select class="form-control" id="state">
@@ -96,10 +61,7 @@
                 <option>West Bengal</option><option>Delhi</option>
               </select>
             </div>
-            <div class="form-group">
-              <label>State Code</label>
-              <input type="text" class="form-control" id="stateCode" placeholder="Enter State Code">
-            </div>
+            <div class="form-group"><label>State Code</label><input type="text" class="form-control" id="stateCode" placeholder="Enter State Code"></div>
           </div>
         </div>
 
@@ -112,28 +74,26 @@
             <input type="file" id="signFile" accept="image/*" hidden>
           </label>
           <p id="signFileName" class="mt-2" style="font-size:13px; color:var(--gray);"></p>
-          <img id="signPrev" style="max-height:80px; margin-top:8px; display:none; background: #f1f5f9; padding: 6px; border-radius: 6px;">
+          <img id="signPrev" style="max-height:80px; margin-top:8px; display:none; background:#f1f5f9; padding:6px; border-radius:6px;">
         </div>
 
         <div class="form-card">
           <h3 class="section-title">Particulars / Items</h3>
           <div style="overflow-x:auto;">
           <table class="items-table">
-            <thead>
-              <tr><th style="width:60px">Sr No</th><th>Particulars</th><th style="width:100px">Qty</th><th style="width:120px">Rate</th><th style="width:140px">Amount</th><th style="width:60px">Action</th></tr>
-            </thead>
+            <thead><tr><th style="width:60px">Sr No</th><th>Particulars</th><th style="width:100px">Qty</th><th style="width:120px">Rate</th><th style="width:140px">Amount</th><th style="width:60px">Action</th></tr></thead>
             <tbody id="itemsBody"></tbody>
           </table>
           </div>
           <button type="button" class="btn btn-dark mt-4" id="addRow"><i data-feather="plus-circle"></i> Add Row</button>
 
-          <div style="margin-top: 22px; padding: 18px; background: var(--light-gray); border-radius: 8px;">
-            <div style="display:flex; justify-content: space-between; padding: 4px 0;"><strong>Subtotal:</strong> <span>₹ <span id="subtotal"></span></span></div>
-            <div style="display:flex; justify-content: space-between; padding: 4px 0;">SGST: <span>₹ <span id="sgstAmt"></span></span></div>
-            <div style="display:flex; justify-content: space-between; padding: 4px 0;">CGST: <span>₹ <span id="cgstAmt"></span></span></div>
-            <div style="display:flex; justify-content: space-between; padding: 4px 0;">IGST: <span>₹ <span id="igstAmt"></span></span></div>
-            <hr style="margin: 10px 0; border-color: #cbd5e1;">
-            <div style="display:flex; justify-content: space-between; padding: 4px 0; font-size: 18px; color: var(--primary);"><strong>Invoice Total:</strong> <strong>₹ <span id="invoiceTotal"></span></strong></div>
+          <div style="margin-top:22px; padding:18px; background:var(--light-gray); border-radius:8px;">
+            <div style="display:flex; justify-content:space-between; padding:4px 0;"><strong>Subtotal:</strong><span>₹ <span id="subtotal">0.00</span></span></div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0;">SGST:<span>₹ <span id="sgstAmt">0.00</span></span></div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0;">CGST:<span>₹ <span id="cgstAmt">0.00</span></span></div>
+            <div style="display:flex; justify-content:space-between; padding:4px 0;">IGST:<span>₹ <span id="igstAmt">0.00</span></span></div>
+            <hr style="margin:10px 0; border-color:#cbd5e1;">
+            <div style="display:flex; justify-content:space-between; padding:4px 0; font-size:18px; color:var(--primary);"><strong>Invoice Total:</strong><strong>₹ <span id="invoiceTotal">0.00</span></strong></div>
           </div>
         </div>
 
@@ -150,40 +110,9 @@
 import { auth, db } from './js/firebase-config.js';
 import { collection, addDoc, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
-import { authGuard, setupSidebar, showToast, showLoader, hideLoader, numberToWords, formatINR, removeBackground } from './js/utils.js';
+import { authGuard, setupSidebar, showToast, showLoader, hideLoader, generateInvoiceNo, numberToWords, formatINRZero, removeBackground } from './js/utils.js';
 
 let currentUser, editId = null, signFileURL = '';
-
-function getNumberOrBlank(inputOrValue) {
-  const raw = typeof inputOrValue === 'string'
-    ? inputOrValue
-    : (inputOrValue?.value ?? '');
-  const value = String(raw).trim();
-  if (value === '') return '';
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : '';
-}
-
-function setText(id, value) {
-  document.getElementById(id).textContent = value;
-}
-
-function setAmountForRow(tr) {
-  const qtyInput = tr.querySelector('.qty');
-  const rateInput = tr.querySelector('.rate');
-  const amountInput = tr.querySelector('.amount');
-  const qtyRaw = qtyInput.value.trim();
-  const rateRaw = rateInput.value.trim();
-
-  if (qtyRaw === '' && rateRaw === '') {
-    amountInput.value = '';
-    return;
-  }
-
-  const qty = Number(qtyRaw || 0);
-  const rate = Number(rateRaw || 0);
-  amountInput.value = (qty * rate).toFixed(2);
-}
 
 (async () => {
   currentUser = await authGuard(auth);
@@ -193,6 +122,8 @@ function setAmountForRow(tr) {
   setupSidebar();
   attachLogout();
 
+  document.getElementById('invoiceDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('invoiceNo').value = generateInvoiceNo();
   addItemRow();
 
   const params = new URLSearchParams(location.search);
@@ -212,9 +143,8 @@ function setAmountForRow(tr) {
     try {
       signFileURL = await removeBackground(f);
       const prev = document.getElementById('signPrev');
-      prev.src = signFileURL;
-      prev.style.display = 'inline-block';
-      showToast('Signature added (background removed)');
+      prev.src = signFileURL; prev.style.display = 'inline-block';
+      showToast('Signature added');
     } catch (er) { showToast(er.message, 'error'); }
     finally { hideLoader(); }
   });
@@ -227,86 +157,48 @@ function addItemRow(item = {}) {
   const tr = document.createElement('tr');
   tr.innerHTML = `
     <td>${idx}</td>
-    <td><input type="text" class="particulars" value="${item.particulars ?? ''}" placeholder="Enter Particulars"></td>
-    <td><input type="number" class="qty" value="${item.qty ?? ''}" min="0" step="0.01" placeholder="Qty"></td>
-    <td><input type="number" class="rate" value="${item.rate ?? ''}" min="0" step="0.01" placeholder="Rate"></td>
-    <td><input type="number" class="amount" value="${item.amount ?? ''}" readonly placeholder="Amount"></td>
+    <td><input type="text" class="particulars" value="${item.particulars || ''}" placeholder="Enter Particulars"></td>
+    <td><input type="number" class="qty" value="${item.qty || ''}" placeholder="0" min="0" step="0.01"></td>
+    <td><input type="number" class="rate" value="${item.rate || ''}" placeholder="0" min="0" step="0.01"></td>
+    <td><input type="number" class="amount" value="${item.amount || 0}" readonly></td>
     <td><button type="button" class="del-row"><i data-feather="trash-2"></i></button></td>
   `;
   tbody.appendChild(tr);
   tr.querySelector('.del-row').addEventListener('click', () => { tr.remove(); reindexRows(); recalc(); });
   ['qty', 'rate'].forEach(c => tr.querySelector('.' + c).addEventListener('input', () => {
-    setAmountForRow(tr);
+    const q = +tr.querySelector('.qty').value || 0;
+    const r = +tr.querySelector('.rate').value || 0;
+    tr.querySelector('.amount').value = (q * r).toFixed(2);
     recalc();
   }));
-  setAmountForRow(tr);
   feather.replace();
 }
-
-function reindexRows() {
-  document.querySelectorAll('#itemsBody tr').forEach((tr, i) => tr.children[0].textContent = i + 1);
-}
-
+function reindexRows() { document.querySelectorAll('#itemsBody tr').forEach((tr, i) => tr.children[0].textContent = i + 1); }
 function recalc() {
   let subtotal = 0;
-  let hasItemData = false;
-
-  document.querySelectorAll('#itemsBody tr').forEach(tr => {
-    const particulars = tr.querySelector('.particulars').value.trim();
-    const qtyRaw = tr.querySelector('.qty').value.trim();
-    const rateRaw = tr.querySelector('.rate').value.trim();
-    const amountRaw = tr.querySelector('.amount').value.trim();
-
-    if (particulars || qtyRaw || rateRaw || amountRaw) hasItemData = true;
-    subtotal += Number(amountRaw || 0);
-  });
-
-  const cgstRaw = document.getElementById('cgst').value.trim();
-  const sgstRaw = document.getElementById('sgst').value.trim();
-  const igstRaw = document.getElementById('igst').value.trim();
-
-  const cgstRate = cgstRaw === '' ? 0 : Number(cgstRaw);
-  const sgstRate = sgstRaw === '' ? 0 : Number(sgstRaw);
-  const igstRate = igstRaw === '' ? 0 : Number(igstRaw);
-
-  const cgstAmt = subtotal * cgstRate / 100;
-  const sgstAmt = subtotal * sgstRate / 100;
-  const igstAmt = subtotal * igstRate / 100;
-  const total = subtotal + cgstAmt + sgstAmt + igstAmt;
-  const hasAnyData = hasItemData || cgstRaw !== '' || sgstRaw !== '' || igstRaw !== '';
-
-  setText('subtotal', hasItemData ? formatINR(subtotal) : '');
-  setText('cgstAmt', cgstRaw !== '' ? formatINR(cgstAmt) : '');
-  setText('sgstAmt', sgstRaw !== '' ? formatINR(sgstAmt) : '');
-  setText('igstAmt', igstRaw !== '' ? formatINR(igstAmt) : '');
-  setText('invoiceTotal', hasAnyData ? formatINR(total) : '');
-  document.getElementById('totalWords').value = hasAnyData ? numberToWords(total) : '';
+  document.querySelectorAll('#itemsBody tr').forEach(tr => { subtotal += +tr.querySelector('.amount').value || 0; });
+  const cgst = (+document.getElementById('cgst').value || 0) * subtotal / 100;
+  const sgst = (+document.getElementById('sgst').value || 0) * subtotal / 100;
+  const igst = (+document.getElementById('igst').value || 0) * subtotal / 100;
+  const total = subtotal + cgst + sgst + igst;
+  document.getElementById('subtotal').textContent = formatINRZero(subtotal);
+  document.getElementById('cgstAmt').textContent = formatINRZero(cgst);
+  document.getElementById('sgstAmt').textContent = formatINRZero(sgst);
+  document.getElementById('igstAmt').textContent = formatINRZero(igst);
+  document.getElementById('invoiceTotal').textContent = formatINRZero(total);
+  document.getElementById('totalWords').value = numberToWords(total);
 }
-
 async function loadInvoice(id) {
   showLoader();
   try {
     const snap = await getDoc(doc(db, 'invoices', id));
     if (!snap.exists()) { showToast('Not found', 'error'); return; }
     const inv = snap.data();
-    document.getElementById('invoiceNo').value = inv.invoiceNo || '';
-    document.getElementById('challanNo').value = inv.challanNo || '';
-    document.getElementById('invoiceDate').value = inv.invoiceDate || '';
-    document.getElementById('vehicleNo').value = inv.vehicleNo || '';
-    document.getElementById('partyGstin').value = inv.partyGstin || '';
-    document.getElementById('partyName').value = inv.partyName || '';
-    document.getElementById('placeOfSupply').value = inv.placeOfSupply || '';
-    document.getElementById('state').value = inv.state || '';
-    document.getElementById('stateCode').value = inv.stateCode || '';
-    document.getElementById('cgst').value = inv.cgst ?? '';
-    document.getElementById('sgst').value = inv.sgst ?? '';
-    document.getElementById('igst').value = inv.igst ?? '';
+    ['invoiceNo','challanNo','invoiceDate','vehicleNo','partyGstin','partyName','placeOfSupply','state','stateCode','cgst','sgst','igst'].forEach(k => {
+      if (inv[k] !== undefined && inv[k] !== null) document.getElementById(k).value = inv[k];
+    });
     signFileURL = inv.signatureUrl || '';
-    if (signFileURL) {
-      const prev = document.getElementById('signPrev');
-      prev.src = signFileURL;
-      prev.style.display = 'inline-block';
-    }
+    if (signFileURL) { const p = document.getElementById('signPrev'); p.src = signFileURL; p.style.display = 'inline-block'; }
     document.getElementById('itemsBody').innerHTML = '';
     (inv.items || []).forEach(it => addItemRow(it));
     if (!inv.items?.length) addItemRow();
@@ -314,26 +206,24 @@ async function loadInvoice(id) {
   } catch (e) { showToast(e.message, 'error'); }
   finally { hideLoader(); }
 }
-
 async function saveInvoice(e) {
   e.preventDefault();
   showLoader();
   try {
     const items = [...document.querySelectorAll('#itemsBody tr')].map(tr => ({
-      particulars: tr.querySelector('.particulars').value.trim(),
-      qty: getNumberOrBlank(tr.querySelector('.qty')),
-      rate: getNumberOrBlank(tr.querySelector('.rate')),
-      amount: getNumberOrBlank(tr.querySelector('.amount'))
-    })).filter(it => it.particulars || it.qty !== '' || it.rate !== '' || it.amount !== '');
-    const subtotalValue = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
-    const cgst = getNumberOrBlank(document.getElementById('cgst'));
-    const sgst = getNumberOrBlank(document.getElementById('sgst'));
-    const igst = getNumberOrBlank(document.getElementById('igst'));
-    const cgstAmt = cgst === '' ? '' : subtotalValue * cgst / 100;
-    const sgstAmt = sgst === '' ? '' : subtotalValue * sgst / 100;
-    const igstAmt = igst === '' ? '' : subtotalValue * igst / 100;
-    const total = subtotalValue + (cgstAmt === '' ? 0 : cgstAmt) + (sgstAmt === '' ? 0 : sgstAmt) + (igstAmt === '' ? 0 : igstAmt);
-    const hasTotals = items.length || cgst !== '' || sgst !== '' || igst !== '';
+      particulars: tr.querySelector('.particulars').value,
+      qty: +tr.querySelector('.qty').value || 0,
+      rate: +tr.querySelector('.rate').value || 0,
+      amount: +tr.querySelector('.amount').value || 0
+    })).filter(it => it.particulars || it.amount);
+    const subtotal = items.reduce((s, i) => s + i.amount, 0);
+    const cgst = +document.getElementById('cgst').value || 0;
+    const sgst = +document.getElementById('sgst').value || 0;
+    const igst = +document.getElementById('igst').value || 0;
+    const cgstAmt = subtotal * cgst / 100;
+    const sgstAmt = subtotal * sgst / 100;
+    const igstAmt = subtotal * igst / 100;
+    const total = subtotal + cgstAmt + sgstAmt + igstAmt;
     const data = {
       userId: currentUser.uid,
       invoiceNo: document.getElementById('invoiceNo').value,
@@ -345,23 +235,14 @@ async function saveInvoice(e) {
       placeOfSupply: document.getElementById('placeOfSupply').value,
       state: document.getElementById('state').value,
       stateCode: document.getElementById('stateCode').value,
-      cgst, sgst, igst,
-      cgstAmt, sgstAmt, igstAmt,
-      subtotal: items.length ? subtotalValue : '',
-      invoiceTotal: hasTotals ? total : '',
-      totalInWords: hasTotals ? numberToWords(total) : '',
-      items,
-      signatureUrl: signFileURL,
+      cgst, sgst, igst, cgstAmt, sgstAmt, igstAmt, subtotal,
+      invoiceTotal: total,
+      totalInWords: numberToWords(total),
+      items, signatureUrl: signFileURL,
       updatedAt: new Date().toISOString()
     };
-    if (editId) {
-      await updateDoc(doc(db, 'invoices', editId), data);
-      showToast('Invoice updated');
-    } else {
-      data.createdAt = new Date().toISOString();
-      await addDoc(collection(db, 'invoices'), data);
-      showToast('Invoice created');
-    }
+    if (editId) { await updateDoc(doc(db, 'invoices', editId), data); showToast('Invoice updated'); }
+    else { data.createdAt = new Date().toISOString(); await addDoc(collection(db, 'invoices'), data); showToast('Invoice created'); }
     setTimeout(() => location.href = 'invoice-list.html', 700);
   } catch (er) { showToast(er.message, 'error'); }
   finally { hideLoader(); }
