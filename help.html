@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Help/Support | Royal Creation Billing</title>
+<title>Help/Support</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/feather-icons"></script>
 <link rel="stylesheet" href="css/style.css">
@@ -14,26 +14,11 @@
   <main class="main-content">
     <div id="topbar-mount"></div>
     <div class="page-content">
-      <div class="page-header">
-        <div>
-          <h2 class="page-title">Help & Support</h2>
-          <div class="breadcrumb"><a href="dashboard.html">Home</a> / Help</div>
-        </div>
-      </div>
+      <div class="page-header"><div><h2 class="page-title">Help & Support</h2><div class="breadcrumb"><a href="dashboard.html">Home</a> / Help</div></div></div>
       <div class="form-card">
         <h3 class="section-title">Frequently Asked Questions</h3>
-        <details style="margin-bottom:12px; padding:12px; border:1px solid var(--border); border-radius:8px;">
-          <summary style="cursor:pointer; font-weight:600;">How do I create a new invoice?</summary>
-          <p style="margin-top:8px; color:var(--gray);">Go to Invoice → Create Invoice button. Fill in all details and submit.</p>
-        </details>
-        <details style="margin-bottom:12px; padding:12px; border:1px solid var(--border); border-radius:8px;">
-          <summary style="cursor:pointer; font-weight:600;">Where does GSTIN appear in PDF?</summary>
-          <p style="margin-top:8px; color:var(--gray);">Company GSTIN automatically appears at the top of the "Total in Words" box in every invoice style.</p>
-        </details>
-        <details style="margin-bottom:12px; padding:12px; border:1px solid var(--border); border-radius:8px;">
-          <summary style="cursor:pointer; font-weight:600;">PDF resolution / quality?</summary>
-          <p style="margin-top:8px; color:var(--gray);">PDF is generated at 300 DPI on exact A4 (210×297mm) with safe margins. Print-ready quality.</p>
-        </details>
+        <details style="margin-bottom:12px; padding:12px; border:1px solid var(--border); border-radius:8px;"><summary style="cursor:pointer; font-weight:600;">Where does GSTIN appear in PDF?</summary><p style="margin-top:8px; color:var(--gray);">Inside the "Total in Words" section, on its own dedicated bar above the Bank Details. Applies to all 5 styles.</p></details>
+        <details style="margin-bottom:12px; padding:12px; border:1px solid var(--border); border-radius:8px;"><summary style="cursor:pointer; font-weight:600;">PDF size?</summary><p style="margin-top:8px; color:var(--gray);">Exact A4 (210×297mm) at 300 DPI. Full page coverage with no white space at bottom.</p></details>
         <h3 class="section-title mt-4">Contact Support</h3>
         <p>📧 Email: support@royalcreation.example</p>
         <p>📞 Phone: +91 0000 000 000</p>
@@ -41,7 +26,6 @@
     </div>
   </main>
 </div>
-
 <script type="module">
 import { auth } from './js/firebase-config.js';
 import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
@@ -50,9 +34,7 @@ import { authGuard, setupSidebar } from './js/utils.js';
   const user = await authGuard(auth);
   document.getElementById('sidebar-mount').innerHTML = renderSidebar('help');
   document.getElementById('topbar-mount').innerHTML = renderTopbar(user.displayName || 'User');
-  feather.replace();
-  setupSidebar();
-  attachLogout();
+  feather.replace(); setupSidebar(); attachLogout();
 })();
 </script>
 </body>
