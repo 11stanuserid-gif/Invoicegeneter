@@ -24,52 +24,31 @@
 
       <form id="companyForm" class="form-card">
         <div class="form-grid">
-          <div class="form-group">
-            <label>Logo</label>
-            <input type="file" class="form-control" id="logoFile" accept="image/*">
-            <img id="logoPrev" style="max-width:100px; margin-top:8px; display:none; border:1px solid var(--border); padding:4px; border-radius:6px;">
-          </div>
-          <div class="form-group">
-            <label>Sign <small style="color:var(--gray); text-transform:none;">(Background auto-removed)</small></label>
-            <input type="file" class="form-control" id="signFile" accept="image/*">
-            <img id="signPrev" style="max-width:120px; margin-top:8px; display:none; background: #f1f5f9; padding:6px; border-radius:6px;">
-          </div>
+          <div class="form-group"><label>Logo</label><input type="file" class="form-control" id="logoFile" accept="image/*"><img id="logoPrev" style="max-width:100px; margin-top:8px; display:none; border:1px solid var(--border); padding:4px; border-radius:6px;"></div>
+          <div class="form-group"><label>Sign <small style="color:var(--gray); text-transform:none;">(Background auto-removed)</small></label><input type="file" class="form-control" id="signFile" accept="image/*"><img id="signPrev" style="max-width:120px; margin-top:8px; display:none; background:#f1f5f9; padding:6px; border-radius:6px;"></div>
         </div>
-
         <div class="form-grid">
-          <div class="form-group">
-            <label>Top Title <small style="color:var(--gray);">(e.g., TAX INVOICE — shown on top)</small></label>
-            <input type="text" class="form-control" id="topTitle" placeholder="TAX INVOICE">
-          </div>
+          <div class="form-group"><label>Top Title <small style="color:var(--gray);">(e.g., TAX INVOICE)</small></label><input type="text" class="form-control" id="topTitle" placeholder="TAX INVOICE"></div>
         </div>
-
         <div class="form-grid">
-          <div class="form-group"><label>Name 01 <small style="color:var(--gray);">(Main Company Name)</small></label><input type="text" class="form-control" id="name01" placeholder="ROYAL"></div>
-          <div class="form-group"><label>Name 02 <small style="color:var(--gray);">(Optional second part)</small></label><input type="text" class="form-control" id="name02" placeholder="CREATION"></div>
+          <div class="form-group"><label>Name 01 <small style="color:var(--gray);">(First word of company name)</small></label><input type="text" class="form-control" id="name01" placeholder="ROYAL"></div>
+          <div class="form-group"><label>Name 02 <small style="color:var(--gray);">(Second word — optional)</small></label><input type="text" class="form-control" id="name02" placeholder="CREATION"></div>
         </div>
-
         <div class="form-grid">
-          <div class="form-group">
-            <label>Sub Title <small style="color:var(--gray);">(below Company Name)</small></label>
-            <input type="text" class="form-control" id="subTitle" placeholder="Spl. In Smoking, Pintex, Peaco, Rka, Picot">
-          </div>
+          <div class="form-group"><label>Sub Title</label><input type="text" class="form-control" id="subTitle" placeholder="Spl. In Smoking, Pintex, Peaco, Rka, Picot"></div>
           <div class="form-group"><label>Name Colour</label><input type="color" class="form-control" id="nameColor" value="#1e3a8a" style="height:46px"></div>
-          <div class="form-group"><label>GSTIN <small style="color:var(--gray);">(Will appear in PDF "Total in Words" box)</small></label><input type="text" class="form-control" id="gstin" placeholder="27ABCDE1234F1Z5"></div>
+          <div class="form-group"><label>GSTIN</label><input type="text" class="form-control" id="gstin" placeholder="27ABCDE1234F1Z5"></div>
         </div>
-
         <div class="form-grid">
-          <div class="form-group"><label>Mobile 01</label><input type="text" class="form-control" id="mobile01"></div>
-          <div class="form-group"><label>Mobile 02</label><input type="text" class="form-control" id="mobile02"></div>
-          <div class="form-group"><label>Email</label><input type="email" class="form-control" id="email"></div>
+          <div class="form-group"><label>Mobile 01</label><input type="text" class="form-control" id="mobile01" placeholder=""></div>
+          <div class="form-group"><label>Mobile 02</label><input type="text" class="form-control" id="mobile02" placeholder=""></div>
+          <div class="form-group"><label>Email</label><input type="email" class="form-control" id="email" placeholder=""></div>
         </div>
-
-        <div class="form-group"><label>Address</label><textarea class="form-control" id="address" placeholder="Full company address"></textarea></div>
-
+        <div class="form-group"><label>Address</label><textarea class="form-control" id="address" placeholder="Enter your full company address"></textarea></div>
         <div class="form-group">
-          <label>Bank Detail <small style="color:var(--gray); display:block; margin-top:4px;">Use the editor below — exactly what you type/format will appear in the invoice PDF.</small></label>
+          <label>Bank Detail <small style="color:var(--gray); display:block; margin-top:4px;">Use the editor — exactly what you type/format will appear in the invoice PDF.</small></label>
           <div class="rich-editor" id="bankEditor"></div>
         </div>
-
         <button type="submit" class="btn btn-dark"><i data-feather="save"></i> Update Company</button>
       </form>
     </div>
@@ -117,19 +96,11 @@ async function uploadFile(e, type) {
   showLoader();
   try {
     let url;
-    if (type === 'sign') {
-      url = await removeBackground(f);
-    } else {
-      url = await compressImage(f, 800, 0.9);
-    }
-    if (type === 'logo') {
-      logoUrl = url;
-      const p = document.getElementById('logoPrev'); p.src = url; p.style.display = 'block';
-    } else {
-      signUrl = url;
-      const p = document.getElementById('signPrev'); p.src = url; p.style.display = 'block';
-    }
-    showToast(type === 'sign' ? 'Sign uploaded (background removed)' : 'Logo uploaded');
+    if (type === 'sign') url = await removeBackground(f);
+    else url = await compressImage(f, 800, 0.9);
+    if (type === 'logo') { logoUrl = url; const p = document.getElementById('logoPrev'); p.src = url; p.style.display = 'block'; }
+    else { signUrl = url; const p = document.getElementById('signPrev'); p.src = url; p.style.display = 'block'; }
+    showToast(type === 'sign' ? 'Sign uploaded' : 'Logo uploaded');
   } catch (er) { showToast(er.message || 'Upload failed', 'error'); }
   finally { hideLoader(); }
 }
