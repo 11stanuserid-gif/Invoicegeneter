@@ -13,90 +13,90 @@ function taxLabel(label, rate) {
   return isFilled(rate) ? `${label} @ ${rate}%` : label;
 }
 
-/* =========================================================
-   Always show every field. If value is missing, leave a
-   visible blank line (______) so layout never collapses.
-   This solves the "empty field disappears" issue both in
-   preview and in PDF.
-   ========================================================= */
-function valOrBlank(value) {
-  return isFilled(value) ? value : '<span class="inv-blank-line">______</span>';
-}
-
 function buildPartyMeta(inv, useIcons = false) {
-  const rows = [
-    { icon: '👤', label: 'Party',         value: inv.partyName },
-    { icon: '📍', label: 'Place of Supply', value: inv.placeOfSupply },
-    { icon: '🗺',  label: 'State',         value: inv.state },
-    { icon: '#',  label: 'State Code',    value: inv.stateCode },
-    { icon: '#',  label: 'Party GSTIN',   value: inv.partyGstin, gstin: true }
-  ];
+  const parts = [];
 
-  return rows.map((r) => {
-    const cls = r.gstin ? 'inv-meta-row inv-gstin-row' : 'inv-meta-row';
-    if (useIcons) {
-      return `<div class="${cls}"><span class="ico">${r.icon}</span><span class="inv-meta-text"><strong>${r.label}:</strong> ${valOrBlank(r.value)}</span></div>`;
-    }
-    return `<div class="${cls}"><span class="inv-meta-text"><strong>${r.label}:</strong> ${valOrBlank(r.value)}</span></div>`;
-  }).join('');
+  if (inv.partyName) {
+    parts.push(useIcons
+      ? `<div class="inv-meta-row"><span class="ico">👤</span><span><strong>Party:</strong> ${inv.partyName}</span></div>`
+      : `<div><strong>Party:</strong> ${inv.partyName}</div>`);
+  }
+
+  const placeStateParts = [];
+  if (inv.placeOfSupply) placeStateParts.push(`<strong>Place of Supply:</strong> ${inv.placeOfSupply}`);
+  if (inv.state) placeStateParts.push(`<strong>State:</strong> ${inv.state}`);
+  if (inv.stateCode) placeStateParts.push(`<strong>State Code:</strong> ${inv.stateCode}`);
+  if (placeStateParts.length) parts.push(`<div>${placeStateParts.join(' &nbsp; ')}</div>`);
+
+  if (inv.partyGstin) {
+    parts.push(useIcons
+      ? `<div class="inv-meta-row inv-gstin-row"><span class="ico">#</span><span><strong>Party GSTIN:</strong> ${inv.partyGstin}</span></div>`
+      : `<div class="inv-gstin-row"><strong>Party GSTIN:</strong> ${inv.partyGstin}</div>`);
+  }
+
+  return parts.join('');
 }
 
 function buildInvoiceMeta(inv, useIcons = false) {
+  const parts = [];
   const items = [
-    { icon: '📋', label: 'Invoice No.',  value: inv.invoiceNo },
-    { icon: '🚚', label: 'Challan No.',  value: inv.challanNo },
+    { icon: '📋', label: 'Invoice No.', value: inv.invoiceNo },
+    { icon: '🚚', label: 'Challan No.', value: inv.challanNo },
     { icon: '📅', label: 'Invoice Date', value: inv.invoiceDate ? formatDate(inv.invoiceDate) : '' },
-    { icon: '🚗', label: 'Vehicle No.',  value: inv.vehicleNo }
+    { icon: '🚗', label: 'Vehicle No.', value: inv.vehicleNo }
   ];
 
-  return items.map((item) => {
+  items.forEach((item) => {
+    if (!item.value) return;
     if (useIcons) {
-      return `<div class="inv-meta-row"><span class="ico">${item.icon}</span><span class="inv-meta-text"><strong>${item.label}:</strong> ${valOrBlank(item.value)}</span></div>`;
+      parts.push(`<div class="inv-meta-row"><span class="ico">${item.icon}</span><span><strong>${item.label}:</strong> ${item.value}</span></div>`);
+    } else {
+      parts.push(`<div><strong>${item.label}:</strong> ${item.value}</div>`);
     }
-    return `<div class="inv-meta-row"><span class="inv-meta-text"><strong>${item.label}:</strong> ${valOrBlank(item.value)}</span></div>`;
-  }).join('');
+  });
+
+  return parts.join('');
 }
 
 function buildContact(company, useCircleIcons = false) {
   const phones = [];
   if (company.mobile01) phones.push(company.mobile01);
   if (company.mobile02) phones.push(company.mobile02);
+  if (!phones.length && !company.email) return '';
 
   const phoneIcon = useCircleIcons ? `<span class="ic-circle">📞</span>` : '📞';
   const emailIcon = useCircleIcons ? `<span class="ic-circle">✉</span>` : '✉';
 
   const parts = [];
-  // Always render two phone slots so layout height is fixed
-  parts.push(`<div class="row">${phoneIcon} <span class="val">${phones[0] || '\u00A0'}</span></div>`);
-  parts.push(`<div class="row">${phoneIcon} <span class="val">${phones[1] || '\u00A0'}</span></div>`);
-  parts.push(`<div class="row">${emailIcon} <span class="val">${company.email || '\u00A0'}</span></div>`);
+  phones.forEach((phone) => {
+    parts.push(`<div class="row">${phoneIcon} <span class="val">${phone}</span></div>`);
+  });
+  if (company.email) {
+    parts.push(`<div class="row">${emailIcon} <span class="val">${company.email}</span></div>`);
+  }
 
   return `<div class="inv-contact">${parts.join('')}</div>`;
 }
 
 function buildSummary(inv, company) {
-  // GSTIN line — fixed format: "GSTIN :- XXXXX", left aligned, same size,
-  // and visually connected to the bordered box around it.
-  const gstinValue = company.gstin || '';
-  const companyGstin = `
-    <div class="gstin-line">
-      <span class="gstin-text">GSTIN :- ${gstinValue || '______'}</span>
-    </div>
-  `;
+  const showSummaryValues = [inv.subtotal, inv.cgstAmt, inv.sgstAmt, inv.igstAmt, inv.invoiceTotal].some(isFilled);
+  const companyGstin = company.gstin
+    ? `<div class="gstin-line"><span class="gstin-label">GSTIN</span><span class="gstin-value">${company.gstin}</span></div>`
+    : '';
 
   return `
     <div class="inv-summary">
       <div class="words">
         ${companyGstin}
         <div class="words-label">Total in Words:</div>
-        <div class="words-text">${inv.totalInWords || '\u00A0'}</div>
+        <div class="words-text">${inv.totalInWords || ''}</div>
       </div>
       <div class="totals">
         <div><span>Total</span><span>${moneyOrBlank(inv.subtotal)}</span></div>
         <div><span>${taxLabel('SGST', inv.sgst)}</span><span>${moneyOrBlank(inv.sgstAmt)}</span></div>
         <div><span>${taxLabel('CGST', inv.cgst)}</span><span>${moneyOrBlank(inv.cgstAmt)}</span></div>
         <div><span>${taxLabel('IGST', inv.igst)}</span><span>${moneyOrBlank(inv.igstAmt)}</span></div>
-        <div><span>Invoice Total</span><span>${moneyOrBlank(inv.invoiceTotal)}</span></div>
+        <div><span>Invoice Total</span><span>${showSummaryValues ? moneyOrBlank(inv.invoiceTotal) : ''}</span></div>
       </div>
     </div>
   `;
@@ -117,11 +117,11 @@ function buildItemsTable(items) {
     const hasContent = !item.__blank && (isFilled(item.particulars) || isFilled(item.qty) || isFilled(item.rate) || isFilled(item.amount));
     return `
       <tr class="${item.__blank ? 'inv-row-empty' : ''}">
-        <td>${hasContent ? (index + 1) : '\u00A0'}</td>
-        <td>${item.particulars || '\u00A0'}</td>
-        <td>${isFilled(item.qty) ? item.qty : '\u00A0'}</td>
-        <td>${isFilled(item.rate) ? formatINR(item.rate) : '\u00A0'}</td>
-        <td>${isFilled(item.amount) ? formatINR(item.amount) : '\u00A0'}</td>
+        <td>${hasContent ? (index + 1) : ''}</td>
+        <td>${item.particulars || ''}</td>
+        <td>${isFilled(item.qty) ? item.qty : ''}</td>
+        <td>${isFilled(item.rate) ? formatINR(item.rate) : ''}</td>
+        <td>${isFilled(item.amount) ? formatINR(item.amount) : ''}</td>
       </tr>
     `;
   }).join('');
@@ -151,16 +151,16 @@ function buildHeader(company, contact) {
   const nameColor = company.nameColor || '';
 
   const logoCell = company.logoUrl
-    ? `<div class="inv-logo-cell"><img src="${company.logoUrl}" alt="logo" crossorigin="anonymous"></div>`
-    : `<div class="inv-logo-cell inv-logo-empty">LOGO</div>`;
+    ? `<div class="inv-logo-cell"><img src="${company.logoUrl}" alt="logo"></div>`
+    : `<div class="inv-logo-cell inv-logo-empty"></div>`;
 
-  const titleHtml = topTitle ? `<div class="inv-tax-badge">${topTitle}</div>` : `<div class="inv-tax-badge">TAX INVOICE</div>`;
-  const nameHtml = `<h1 class="inv-company-name" style="${nameColor ? `color:${nameColor};` : ''}">${(fullName || 'Company Name').toUpperCase()}</h1>`;
-  const subtitleHtml = `<div class="inv-subtitle">${subTitle || '\u00A0'}</div>`;
+  const titleHtml = topTitle ? `<div class="inv-tax-badge">${topTitle}</div>` : '';
+  const nameHtml = fullName ? `<h1 class="inv-company-name" style="${nameColor ? `color:${nameColor};` : ''}">${fullName.toUpperCase()}</h1>` : '';
+  const subtitleHtml = subTitle ? `<div class="inv-subtitle">${subTitle}</div>` : '';
 
   return {
     logoCell,
-    fullName: fullName || 'Company Name',
+    fullName,
     headerCenter: `
       <div class="inv-header-center">
         ${titleHtml}
@@ -173,19 +173,14 @@ function buildHeader(company, contact) {
 }
 
 function buildFooter(inv, company, fullName, bankHTML, variant = 'classic') {
-  const receiverSignature = inv.signatureUrl
-    ? `<div class="sig-img-wrap"><img src="${inv.signatureUrl}" alt="Receiver signature" crossorigin="anonymous"></div>`
-    : `<div class="sig-img-wrap"></div>`;
-  const authorisedSignature = company.signUrl
-    ? `<div class="sig-img-wrap"><img src="${company.signUrl}" alt="Authorised signature" crossorigin="anonymous"></div>`
-    : `<div class="sig-img-wrap"></div>`;
-  const companyLine = `<div class="for-line">For ${fullName || '______'}</div>`;
-  const safeBank = bankHTML && bankHTML.trim() ? bankHTML : '<div>______</div>';
+  const receiverSignature = inv.signatureUrl ? `<div class="sig-img-wrap"><img src="${inv.signatureUrl}" alt="Receiver signature"></div>` : `<div class="sig-img-wrap"></div>`;
+  const authorisedSignature = company.signUrl ? `<div class="sig-img-wrap"><img src="${company.signUrl}" alt="Authorised signature"></div>` : `<div class="sig-img-wrap"></div>`;
+  const companyLine = fullName ? `<div class="for-line">For ${fullName}</div>` : '';
 
   if (variant === 'tag') {
     return `
       <div class="inv-footer">
-        <div><span class="ftr-tag">BANK DETAILS</span><div class="bank-html">${safeBank}</div></div>
+        <div><span class="ftr-tag">BANK DETAILS</span><div class="bank-html">${bankHTML}</div></div>
         <div><span class="ftr-tag">Receiver's Signature</span>${receiverSignature}</div>
         <div><span class="ftr-tag">Authorised Signature</span>${authorisedSignature}${companyLine}</div>
       </div>
@@ -196,7 +191,7 @@ function buildFooter(inv, company, fullName, bankHTML, variant = 'classic') {
     <div class="inv-footer">
       <div>
         <div class="bank-title">BANK DETAILS</div>
-        <div class="bank-html">${safeBank}</div>
+        <div class="bank-html">${bankHTML}</div>
       </div>
       <div>
         <div class="sig-label">Receiver's Signature</div>
@@ -209,19 +204,6 @@ function buildFooter(inv, company, fullName, bankHTML, variant = 'classic') {
       </div>
     </div>
   `;
-}
-
-function addressBlock(address, variant) {
-  // Always render the address box (with horizontal line) even if empty,
-  // so the line never goes missing in the PDF.
-  const safe = address && address.trim() ? address : '\u00A0';
-  if (variant === 'plain') {
-    return `<div class="inv-address">📍 <strong>ADDRESS:</strong> ${safe}</div>`;
-  }
-  if (variant === 'inline') {
-    return `<div class="inv-address"><span class="inv-address-tag">📍 ADDRESS</span> ${safe}</div>`;
-  }
-  return `<div class="inv-address"><span class="inv-address-tag">📍 ADDRESS</span><div class="inv-address-body">${safe}</div></div>`;
 }
 
 export function renderInvoiceTemplate(style, invoice, company) {
@@ -241,7 +223,7 @@ export function renderInvoiceTemplate(style, invoice, company) {
             ${header.headerCenter}
             ${header.contact}
           </div>
-          ${addressBlock(address, 'plain')}
+          ${address ? `<div class="inv-address">📍 <strong>ADDRESS:</strong> ${address}</div>` : ''}
           <div class="inv-meta">
             <div>${buildPartyMeta(inv, false)}</div>
             <div>${buildInvoiceMeta(inv, false)}</div>
@@ -268,7 +250,7 @@ export function renderInvoiceTemplate(style, invoice, company) {
             ${header.headerCenter}
             ${header.contact}
           </div>
-          ${addressBlock(address, 'tag')}
+          ${address ? `<div class="inv-address"><span class="inv-address-tag">📍 ADDRESS</span><div style="margin-top:4px;">${address}</div></div>` : ''}
           <div class="inv-meta">
             <div>${buildPartyMeta(inv, true)}</div>
             <div>${buildInvoiceMeta(inv, true)}</div>
@@ -297,7 +279,7 @@ export function renderInvoiceTemplate(style, invoice, company) {
             ${header.headerCenter}
             ${header.contact}
           </div>
-          ${addressBlock(address, 'tag')}
+          ${address ? `<div class="inv-address"><span class="inv-address-tag">📍 ADDRESS</span><div style="margin-top:4px;">${address}</div></div>` : ''}
           <div class="inv-meta">
             <div>${buildPartyMeta(inv, true)}</div>
             <div>${buildInvoiceMeta(inv, true)}</div>
@@ -322,7 +304,7 @@ export function renderInvoiceTemplate(style, invoice, company) {
             ${header.headerCenter}
             ${header.contact}
           </div>
-          ${addressBlock(address, 'tag')}
+          ${address ? `<div class="inv-address"><span class="inv-address-tag">📍 Address</span><div style="margin-top:4px;">${address}</div></div>` : ''}
           <div class="inv-meta">
             <div>${buildPartyMeta(inv, false)}</div>
             <div>${buildInvoiceMeta(inv, false)}</div>
@@ -349,7 +331,7 @@ export function renderInvoiceTemplate(style, invoice, company) {
             ${header.headerCenter}
             ${header.contact}
           </div>
-          ${addressBlock(address, 'inline')}
+          ${address ? `<div class="inv-address"><span class="inv-address-tag">📍 ADDRESS</span> ${address}</div>` : ''}
           <div class="inv-meta">
             <div>${buildPartyMeta(inv, true)}</div>
             <div>${buildInvoiceMeta(inv, true)}</div>
