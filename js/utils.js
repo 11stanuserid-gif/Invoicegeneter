@@ -32,6 +32,12 @@ export function hideLoader() {
 }
 
 export function formatINR(num) {
+  if (!num && num !== 0) return '';
+  if (num === 0) return '';
+  return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+export function formatINRZero(num) {
   if (!num && num !== 0) return '0.00';
   return Number(num).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -52,7 +58,7 @@ export function generateInvoiceNo() {
 }
 
 export function numberToWords(num) {
-  if (!num || num === 0) return 'Zero Rupees Only';
+  if (!num || num === 0) return '';
   const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
   const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
   num = Math.floor(num);
@@ -98,7 +104,6 @@ export function setupSidebar() {
   }
 }
 
-// Compress image to base64
 export function compressImage(file, maxWidth = 800, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -107,10 +112,7 @@ export function compressImage(file, maxWidth = 800, quality = 0.85) {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        if (width > maxWidth) {
-          height = (maxWidth / width) * height;
-          width = maxWidth;
-        }
+        if (width > maxWidth) { height = (maxWidth / width) * height; width = maxWidth; }
         canvas.width = width;
         canvas.height = height;
         const ctx = canvas.getContext('2d');
@@ -125,7 +127,6 @@ export function compressImage(file, maxWidth = 800, quality = 0.85) {
   });
 }
 
-// Remove background from signature - output transparent PNG
 export function removeBackground(file, threshold = 225) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -149,11 +150,8 @@ export function removeBackground(file, threshold = 225) {
               data[i+3] = 0;
             } else {
               const brightness = (r + g + b) / 3;
-              if (brightness < 180) {
-                data[i+3] = 255;
-              } else {
-                data[i+3] = Math.max(0, 255 - ((brightness - 100) * 3));
-              }
+              if (brightness < 180) data[i+3] = 255;
+              else data[i+3] = Math.max(0, 255 - ((brightness - 100) * 3));
             }
           }
           ctx.putImageData(imgData, 0, 0);
@@ -168,10 +166,4 @@ export function removeBackground(file, threshold = 225) {
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
-}
-
-// Helper: render only filled fields
-export function ifField(value, html) {
-  if (value === undefined || value === null || value === '' || value === 0) return '';
-  return typeof html === 'function' ? html(value) : html;
 }
