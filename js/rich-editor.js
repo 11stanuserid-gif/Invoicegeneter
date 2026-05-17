@@ -26,7 +26,6 @@ export function initRichEditor(containerId, initialHtml = '') {
       </select>
       <input type="color" data-cmd="foreColor" title="Text Color" value="#000000">
       <span class="sep"></span>
-      <button type="button" data-cmd="insertHorizontalRule" title="Horizontal Line">—</button>
       <button type="button" data-cmd="removeFormat" title="Clear Formatting">✕</button>
     </div>
     <div class="rich-content" contenteditable="true" id="${containerId}_content"></div>
@@ -54,7 +53,6 @@ export function initRichEditor(containerId, initialHtml = '') {
 
   return {
     getHTML: () => content.innerHTML,
-    setHTML: (html) => { content.innerHTML = html || ''; },
-    getElement: () => content
+    setHTML: (html) => { content.innerHTML = html || ''; }
   };
 }
