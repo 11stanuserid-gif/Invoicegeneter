@@ -11,22 +11,12 @@
 <link rel="stylesheet" href="css/style.css">
 <style>
 .toolbar { background:white; padding:14px 22px; border-radius:var(--radius); margin-bottom:18px; display:flex; gap:10px; flex-wrap:wrap; box-shadow:var(--shadow-sm); align-items:center; }
-.invoice-wrapper {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 10px;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-.invoice-scale {
-  transform-origin: top center;
-  display: inline-block;
-}
-@media print {
-  .invoice-wrapper { padding: 0; overflow: visible; }
-  .invoice-scale { transform: none !important; width: auto !important; }
+.toolbar-note { margin-left:auto; font-size:13px; color:var(--gray); font-weight:600; }
+.invoice-wrapper { display:flex; justify-content:center; padding:20px 0; overflow:hidden; }
+.invoice-stage { width:794px; transform-origin:top center; will-change:transform; }
+@media (max-width: 900px) {
+  .toolbar { padding:12px 14px; }
+  .toolbar-note { width:100%; margin-left:0; }
 }
 </style>
 </head>
@@ -40,18 +30,9 @@
         <a href="invoice-list.html" class="btn btn-outline"><i data-feather="arrow-left"></i> Back</a>
         <button class="btn btn-primary" onclick="window.print()"><i data-feather="printer"></i> Print</button>
         <button class="btn btn-dark" id="downloadPdf"><i data-feather="download"></i> Download PDF</button>
-        <label style="margin-left:auto; display:flex; align-items:center; gap:8px;">
-          Style:
-          <select id="styleSelect" class="form-control" style="width:auto; padding:8px 12px;">
-            <option value="1">Style 01</option>
-            <option value="2">Style 02</option>
-            <option value="3">Style 03</option>
-            <option value="4">Style 04</option>
-            <option value="5">Style 05</option>
-          </select>
-        </label>
+        <span class="toolbar-note">Standard centered Royal Creation layout enabled</span>
       </div>
-      <div class="invoice-wrapper"><div class="invoice-scale" id="invoiceContainer"></div></div>
+      <div class="invoice-wrapper" id="invoiceContainer"></div>
     </div>
   </main>
 </div>
@@ -63,7 +44,9 @@ import { renderSidebar, renderTopbar, attachLogout } from './js/sidebar.js';
 import { authGuard, setupSidebar, showToast, showLoader, hideLoader } from './js/utils.js';
 import { renderInvoiceTemplate } from './js/invoice-template.js';
 
-let invoice, company, style = 1;
+const PAPER_WIDTH = 794;
+const PAPER_HEIGHT = 1123;
+let invoice, company;
 
 (async () => {
   const user = await authGuard(auth);
@@ -82,88 +65,100 @@ let invoice, company, style = 1;
     const snap = await getDoc(doc(db, 'invoices', id));
     if (!snap.exists()) { showToast('Invoice not found', 'error'); return; }
     invoice = snap.data();
-
     const cSnap = await getDoc(doc(db, 'company', user.uid));
     company = cSnap.exists() ? cSnap.data() : {};
-
-    const sSnap = await getDoc(doc(db, 'settings', user.uid));
-    if (sSnap.exists()) style = +sSnap.data().printStyle || 1;
-    document.getElementById('styleSelect').value = style;
-
     render();
-  } catch (e) { showToast(e.message, 'error'); }
-  finally { hideLoader(); }
+  } catch (e) {
+    showToast(e.message, 'error');
+  } finally {
+    hideLoader();
+  }
 
-  document.getElementById('styleSelect').addEventListener('change', e => { style = +e.target.value; render(); });
+  window.addEventListener('resize', fitInvoiceToViewport);
   document.getElementById('downloadPdf').addEventListener('click', downloadPDF);
 })();
 
 function render() {
-  document.getElementById('invoiceContainer').innerHTML = renderInvoiceTemplate(style, invoice, company);
-  fitInvoiceToWidth();
+  const container = document.getElementById('invoiceContainer');
+  container.innerHTML = `<div class="invoice-stage">${renderInvoiceTemplate(1, invoice, company)}</div>`;
+  fitInvoiceToViewport();
 }
 
-function fitInvoiceToWidth() {
-  const scaleEl = document.getElementById('invoiceContainer');
-  const wrapper = scaleEl.parentElement;
-  if (!scaleEl || !wrapper) return;
-  const apply = () => {
-    const available = wrapper.clientWidth - 20;
-    const paperWidth = 794;
-    const ratio = Math.min(1, available / paperWidth);
-    scaleEl.style.transform = `scale(${ratio})`;
-    scaleEl.style.width = paperWidth + 'px';
-    const paperHeight = 1123;
-    wrapper.style.minHeight = (paperHeight * ratio + 20) + 'px';
-  };
-  apply();
-  if (!window.__fitListenerAdded) {
-    window.addEventListener('resize', apply);
-    window.__fitListenerAdded = true;
-  }
+function fitInvoiceToViewport() {
+  const container = document.getElementById('invoiceContainer');
+  const stage = container.querySelector('.invoice-stage');
+  if (!container || !stage) return;
+  const availableWidth = Math.max(container.clientWidth - 16, 280);
+  const scale = Math.min(1, availableWidth / PAPER_WIDTH);
+  stage.style.transform = `scale(${scale})`;
+  stage.style.height = `${PAPER_HEIGHT * scale}px`;
+}
+
+async function cloneForExport(el) {
+  const mount = document.createElement('div');
+  mount.style.position = 'fixed';
+  mount.style.left = '-100000px';
+  mount.style.top = '0';
+  mount.style.width = `${PAPER_WIDTH}px`;
+  mount.style.height = `${PAPER_HEIGHT}px`;
+  mount.style.background = '#ffffff';
+  mount.style.zIndex = '-1';
+  document.body.appendChild(mount);
+
+  const clone = el.cloneNode(true);
+  clone.style.transform = 'none';
+  clone.style.margin = '0';
+  clone.style.boxShadow = 'none';
+  clone.style.width = `${PAPER_WIDTH}px`;
+  clone.style.height = `${PAPER_HEIGHT}px`;
+  mount.appendChild(clone);
+
+  const images = clone.querySelectorAll('img');
+  await Promise.all([...images].map(img => img.complete ? Promise.resolve() : new Promise(resolve => {
+    img.onload = resolve;
+    img.onerror = resolve;
+  })));
+
+  return { mount, clone };
 }
 
 async function downloadPDF() {
   const el = document.getElementById('invoicePaper');
   if (!el) return showToast('Nothing to export', 'error');
-  showLoader();
-  showToast('Generating high-quality PDF...');
 
-  // Temporarily reset any preview scaling so html2canvas captures at 1:1
-  const scaleEl = document.getElementById('invoiceContainer');
-  const prevTransform = scaleEl ? scaleEl.style.transform : '';
-  const prevWidth = scaleEl ? scaleEl.style.width : '';
-  if (scaleEl) { scaleEl.style.transform = 'none'; scaleEl.style.width = '794px'; }
+  showLoader();
+  showToast('Generating A4 PDF...');
 
   try {
-    const imgs = el.querySelectorAll('img');
-    await Promise.all([...imgs].map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })));
-    await new Promise(r => setTimeout(r, 400));
+    const { mount, clone } = await cloneForExport(el);
+    await new Promise(resolve => setTimeout(resolve, 200));
 
-    // Render at 300 DPI scale (3.125x of 96 DPI base = ~A4 2480x3508)
-    const canvas = await html2canvas(el, {
-      scale: 3.125,
+    const canvas = await html2canvas(clone, {
+      scale: 4,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
-      windowWidth: el.scrollWidth,
-      windowHeight: el.scrollHeight,
-      width: 794,
-      height: 1123
+      width: PAPER_WIDTH,
+      height: PAPER_HEIGHT,
+      windowWidth: PAPER_WIDTH,
+      windowHeight: PAPER_HEIGHT,
+      scrollX: 0,
+      scrollY: 0
     });
+
+    mount.remove();
+
     const imgData = canvas.toDataURL('image/png', 1.0);
     const { jsPDF } = window.jspdf;
-    // A4 = 210x297mm exact
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
-    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: false });
+    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'NONE');
     pdf.save(`invoice_${invoice.invoiceNo || Date.now()}.pdf`);
-    showToast('PDF downloaded');
+    showToast('A4 PDF downloaded successfully');
   } catch (e) {
     console.error(e);
     showToast('PDF failed: ' + e.message, 'error');
   } finally {
-    if (scaleEl) { scaleEl.style.transform = prevTransform; scaleEl.style.width = prevWidth; fitInvoiceToWidth(); }
     hideLoader();
   }
 }
