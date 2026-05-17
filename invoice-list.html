@@ -26,31 +26,15 @@
           <a href="invoice-create.html" class="btn btn-primary"><i data-feather="plus"></i> Create Invoice</a>
         </div>
       </div>
-
       <div class="table-card">
         <div class="table-toolbar">
-          <div class="entries-select">
-            <select id="perPage"><option>5</option><option>10</option><option>25</option><option>50</option></select>
-            <span>entries per page</span>
-          </div>
-          <div class="search-input">
-            <i data-feather="search"></i>
-            <input type="text" id="searchInput" placeholder="Search invoice...">
-          </div>
+          <div class="entries-select"><select id="perPage"><option>5</option><option>10</option><option>25</option><option>50</option></select><span>entries per page</span></div>
+          <div class="search-input"><i data-feather="search"></i><input type="text" id="searchInput" placeholder="Search invoice..."></div>
         </div>
         <div class="table-wrap">
         <table>
           <thead>
-            <tr>
-              <th><input type="checkbox" id="selectAll"></th>
-              <th>No.</th>
-              <th>Invoice No.</th>
-              <th>Vehicle No.</th>
-              <th>Party Name</th>
-              <th>Invoice Date</th>
-              <th>Total Amount</th>
-              <th>Action</th>
-            </tr>
+            <tr><th><input type="checkbox" id="selectAll"></th><th>No.</th><th>Invoice No.</th><th>Vehicle No.</th><th>Party Name</th><th>Invoice Date</th><th>Total Amount</th><th>Action</th></tr>
           </thead>
           <tbody id="invoiceTbody"></tbody>
         </table>
@@ -79,17 +63,11 @@ let allInvoices = [], filtered = [], currentPage = 1, perPage = 5;
   feather.replace();
   setupSidebar();
   attachLogout();
-
   await loadInvoices(user.uid);
-
   document.getElementById('perPage').addEventListener('change', e => { perPage = +e.target.value; currentPage = 1; render(); });
   document.getElementById('searchInput').addEventListener('input', e => {
     const q = e.target.value.toLowerCase();
-    filtered = allInvoices.filter(i =>
-      (i.invoiceNo || '').toLowerCase().includes(q) ||
-      (i.vehicleNo || '').toLowerCase().includes(q) ||
-      (i.partyName || '').toLowerCase().includes(q)
-    );
+    filtered = allInvoices.filter(i => (i.invoiceNo||'').toLowerCase().includes(q) || (i.vehicleNo||'').toLowerCase().includes(q) || (i.partyName||'').toLowerCase().includes(q));
     currentPage = 1; render();
   });
   document.getElementById('exportBtn').addEventListener('click', exportCSV);
@@ -108,21 +86,14 @@ async function loadInvoices(uid) {
 function render() {
   const tbody = document.getElementById('invoiceTbody');
   if (!filtered.length) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state">
-      <i data-feather="file-text"></i>
-      <h4>No invoices found</h4>
-      <p>Create a new invoice to get started.</p>
-      <a href="invoice-create.html" class="btn btn-primary mt-4"><i data-feather="plus"></i> Create Invoice</a>
-    </div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><i data-feather="file-text"></i><h4>No invoices found</h4><p>Create a new invoice to get started.</p><a href="invoice-create.html" class="btn btn-primary mt-4"><i data-feather="plus"></i> Create Invoice</a></div></td></tr>`;
     document.getElementById('pageInfo').textContent = 'Showing 0 to 0 of 0 entries';
     document.getElementById('pageControls').innerHTML = '<button>‹</button><button class="active">1</button><button>›</button>';
-    feather.replace();
-    return;
+    feather.replace(); return;
   }
   const start = (currentPage - 1) * perPage;
   const end = Math.min(start + perPage, filtered.length);
-  const slice = filtered.slice(start, end);
-  tbody.innerHTML = slice.map((inv, idx) => `
+  tbody.innerHTML = filtered.slice(start, end).map((inv, idx) => `
     <tr>
       <td><input type="checkbox" class="row-check" data-id="${inv.id}"></td>
       <td>${start + idx + 1}</td>
@@ -130,12 +101,12 @@ function render() {
       <td>${inv.vehicleNo || '-'}</td>
       <td>${inv.partyName || '-'}</td>
       <td>${formatDate(inv.invoiceDate)}</td>
-      <td>₹ ${formatINR(inv.invoiceTotal)}</td>
+      <td>₹ ${formatINR(inv.invoiceTotal) || '0.00'}</td>
       <td>
         <div class="action-btns">
-          <a href="invoice-create.html?id=${inv.id}" class="action-btn" title="Edit"><i data-feather="edit-2"></i></a>
-          <a href="invoice-view.html?id=${inv.id}" class="action-btn" title="View"><i data-feather="eye"></i></a>
-          <button class="action-btn delete" onclick="window.deleteInv('${inv.id}')" title="Delete"><i data-feather="trash-2"></i></button>
+          <a href="invoice-create.html?id=${inv.id}" class="action-btn"><i data-feather="edit-2"></i></a>
+          <a href="invoice-view.html?id=${inv.id}" class="action-btn"><i data-feather="eye"></i></a>
+          <button class="action-btn delete" onclick="window.deleteInv('${inv.id}')"><i data-feather="trash-2"></i></button>
         </div>
       </td>
     </tr>
@@ -143,9 +114,7 @@ function render() {
   document.getElementById('pageInfo').textContent = `Showing ${start + 1} to ${end} of ${filtered.length} entries`;
   const pages = Math.ceil(filtered.length / perPage);
   let html = `<button onclick="window.gotoPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>‹</button>`;
-  for (let i = 1; i <= pages; i++) {
-    html += `<button onclick="window.gotoPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
-  }
+  for (let i = 1; i <= pages; i++) html += `<button onclick="window.gotoPage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
   html += `<button onclick="window.gotoPage(${currentPage + 1})" ${currentPage === pages ? 'disabled' : ''}>›</button>`;
   document.getElementById('pageControls').innerHTML = html;
   feather.replace();
@@ -157,32 +126,26 @@ window.deleteInv = async (id) => {
   try { await deleteDoc(doc(db, 'invoices', id)); showToast('Invoice deleted'); allInvoices = allInvoices.filter(i => i.id !== id); filtered = filtered.filter(i => i.id !== id); render(); }
   catch (e) { showToast(e.message, 'error'); }
 };
-
 async function bulkDelete() {
   const checked = [...document.querySelectorAll('.row-check:checked')];
-  if (!checked.length) return showToast('Select invoices to delete', 'error');
+  if (!checked.length) return showToast('Select invoices', 'error');
   if (!confirm(`Delete ${checked.length} invoice(s)?`)) return;
   for (const c of checked) await deleteDoc(doc(db, 'invoices', c.dataset.id));
   showToast('Deleted');
   allInvoices = allInvoices.filter(i => !checked.find(c => c.dataset.id === i.id));
   filtered = [...allInvoices]; render();
 }
-
 function exportCSV() {
-  if (!filtered.length) return showToast('No data to export', 'error');
+  if (!filtered.length) return showToast('No data', 'error');
   const headers = ['No.', 'Invoice No.', 'Vehicle No.', 'Party Name', 'Date', 'Total'];
   const rows = filtered.map((i, idx) => [idx + 1, i.invoiceNo, i.vehicleNo, i.partyName, formatDate(i.invoiceDate), i.invoiceTotal]);
   const csv = [headers, ...rows].map(r => r.map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href = url; a.download = 'invoices.csv'; a.click();
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'invoices.csv'; a.click();
   showToast('Exported');
 }
-
 document.addEventListener('change', (e) => {
-  if (e.target.id === 'selectAll') {
-    document.querySelectorAll('.row-check').forEach(c => c.checked = e.target.checked);
-  }
+  if (e.target.id === 'selectAll') document.querySelectorAll('.row-check').forEach(c => c.checked = e.target.checked);
 });
 </script>
 </body>
