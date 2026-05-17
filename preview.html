@@ -5,8 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Style Preview | Royal Creation Billing</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@700;800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <link rel="stylesheet" href="css/style.css">
 <style>
 html, body { width: 100%; overflow-x: hidden; }
@@ -24,16 +22,6 @@ body { background: #f1f5f9; padding: 0; margin: 0; }
   transform-origin: top center;
   display: inline-block;
 }
-#pdfStage {
-  position: fixed;
-  left: -10000px;
-  top: 0;
-  width: 794px;
-  height: 1123px;
-  background: #ffffff;
-  z-index: -1;
-  pointer-events: none;
-}
 @media print {
   .preview-toolbar { display: none !important; }
   body { background: white; padding: 0; }
@@ -46,11 +34,9 @@ body { background: #f1f5f9; padding: 0; margin: 0; }
 <div class="preview-toolbar">
   <a href="invoice-setting.html" class="btn btn-outline">← Back</a>
   <button class="btn btn-primary" onclick="window.print()">🖨 Print</button>
-  <button class="btn btn-dark" id="downloadPdf">⬇ Download PDF</button>
   <span style="margin-left:auto; align-self:center; font-weight:600;">Style Preview - <span id="lblStyle"></span></span>
 </div>
 <div class="invoice-wrapper"><div class="invoice-scale" id="container"></div></div>
-<div id="pdfStage" aria-hidden="true"></div>
 
 <script type="module">
 import { auth, db } from './js/firebase-config.js';
@@ -62,17 +48,15 @@ const params = new URLSearchParams(location.search);
 const style = +params.get('style') || +sessionStorage.getItem('previewStyle') || 1;
 document.getElementById('lblStyle').textContent = `Style-0${style}`;
 
-let demo = getDemoInvoice();
-let company = {};
-
 onAuthStateChanged(auth, async (user) => {
+  let company = {};
   if (user) {
     try {
       const snap = await getDoc(doc(db, 'company', user.uid));
       if (snap.exists()) company = snap.data();
     } catch (e) {}
   }
-  document.getElementById('container').innerHTML = renderInvoiceTemplate(style, demo, company);
+  document.getElementById('container').innerHTML = renderInvoiceTemplate(style, getDemoInvoice(), company);
   fitInvoiceToWidth();
 });
 
@@ -86,65 +70,13 @@ function fitInvoiceToWidth() {
     const ratio = Math.min(1, available / paperWidth);
     scaleEl.style.transform = `scale(${ratio})`;
     scaleEl.style.width = paperWidth + 'px';
+    // Keep wrapper height correct after scaling
     const paperHeight = 1123;
     wrapper.style.minHeight = (paperHeight * ratio + 20) + 'px';
   };
   apply();
   window.addEventListener('resize', apply);
 }
-
-async function waitImages(root) {
-  const imgs = root.querySelectorAll('img');
-  await Promise.all([...imgs].map(img => {
-    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-    return new Promise(res => {
-      img.onload = res;
-      img.onerror = res;
-      setTimeout(res, 4000);
-    });
-  }));
-  if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch (e) {}
-  }
-  await new Promise(r => setTimeout(r, 250));
-}
-
-document.getElementById('downloadPdf').addEventListener('click', async () => {
-  const stage = document.getElementById('pdfStage');
-  stage.innerHTML = renderInvoiceTemplate(style, demo, company);
-  const paper = stage.querySelector('.invoice-paper');
-  if (!paper) return;
-  paper.classList.add('pdf-export');
-  paper.style.margin = '0';
-  paper.style.transform = 'none';
-  try {
-    await waitImages(paper);
-    const canvas = await html2canvas(paper, {
-      scale: 3,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      logging: false,
-      imageTimeout: 8000,
-      width: 794,
-      height: 1123,
-      windowWidth: 794,
-      windowHeight: 1123,
-      scrollX: 0,
-      scrollY: 0
-    });
-    const imgData = canvas.toDataURL('image/png', 1.0);
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true, hotfixes: ['px_scaling'] });
-    pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
-    pdf.save(`style-0${style}-preview.pdf`);
-  } catch (e) {
-    console.error(e);
-    alert('PDF failed: ' + e.message);
-  } finally {
-    stage.innerHTML = '';
-  }
-});
 </script>
 </body>
 </html>
