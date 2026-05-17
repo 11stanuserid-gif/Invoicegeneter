@@ -24,18 +24,6 @@
   transform-origin: top center;
   display: inline-block;
 }
-/* Off-screen export stage — captures the invoice at exact 794×1123,
-   never scaled, never affected by viewport. PDF == Preview. */
-#pdfStage {
-  position: fixed;
-  left: -10000px;
-  top: 0;
-  width: 794px;
-  height: 1123px;
-  background: #ffffff;
-  z-index: -1;
-  pointer-events: none;
-}
 @media print {
   .invoice-wrapper { padding: 0; overflow: visible; }
   .invoice-scale { transform: none !important; width: auto !important; }
@@ -67,10 +55,6 @@
     </div>
   </main>
 </div>
-
-<!-- Hidden, off-screen stage where the invoice is rendered at exact A4 px
-     for html2canvas. This guarantees PDF == Preview. -->
-<div id="pdfStage" aria-hidden="true"></div>
 
 <script type="module">
 import { auth, db } from './js/firebase-config.js';
@@ -139,74 +123,39 @@ function fitInvoiceToWidth() {
   }
 }
 
-async function waitImages(root) {
-  const imgs = root.querySelectorAll('img');
-  await Promise.all([...imgs].map(img => {
-    if (img.complete && img.naturalWidth > 0) return Promise.resolve();
-    return new Promise(res => {
-      img.onload = res;
-      img.onerror = res;
-      // Safety timeout
-      setTimeout(res, 4000);
-    });
-  }));
-  // Allow fonts to settle
-  if (document.fonts && document.fonts.ready) {
-    try { await document.fonts.ready; } catch (e) {}
-  }
-  await new Promise(r => setTimeout(r, 250));
-}
-
 async function downloadPDF() {
-  if (!invoice) return showToast('Nothing to export', 'error');
+  const el = document.getElementById('invoicePaper');
+  if (!el) return showToast('Nothing to export', 'error');
   showLoader();
   showToast('Generating high-quality PDF...');
 
-  // Render a fresh, fully-independent copy of the invoice into the off-screen
-  // stage. Preview is NOT scaled or modified. PDF is captured at native A4 px.
-  const stage = document.getElementById('pdfStage');
-  stage.innerHTML = renderInvoiceTemplate(style, invoice, company);
-  const paper = stage.querySelector('.invoice-paper');
-  if (!paper) { hideLoader(); return showToast('Render failed', 'error'); }
-
-  // Force exact-color rendering & disable transforms during capture
-  paper.classList.add('pdf-export');
-  paper.style.margin = '0';
-  paper.style.boxShadow = 'none';
-  paper.style.transform = 'none';
+  // Temporarily reset any preview scaling so html2canvas captures at 1:1
+  const scaleEl = document.getElementById('invoiceContainer');
+  const prevTransform = scaleEl ? scaleEl.style.transform : '';
+  const prevWidth = scaleEl ? scaleEl.style.width : '';
+  if (scaleEl) { scaleEl.style.transform = 'none'; scaleEl.style.width = '794px'; }
 
   try {
-    await waitImages(paper);
+    const imgs = el.querySelectorAll('img');
+    await Promise.all([...imgs].map(img => img.complete ? Promise.resolve() : new Promise(r => { img.onload = img.onerror = r; })));
+    await new Promise(r => setTimeout(r, 400));
 
-    // Capture at 3x device scale (~288 DPI) — sharp PDF, exact same layout.
-    const canvas = await html2canvas(paper, {
-      scale: 3,
+    // Render at 300 DPI scale (3.125x of 96 DPI base = ~A4 2480x3508)
+    const canvas = await html2canvas(el, {
+      scale: 3.125,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       logging: false,
-      imageTimeout: 8000,
+      windowWidth: el.scrollWidth,
+      windowHeight: el.scrollHeight,
       width: 794,
-      height: 1123,
-      windowWidth: 794,
-      windowHeight: 1123,
-      scrollX: 0,
-      scrollY: 0,
-      // Render the EXACT element on the off-screen stage
-      foreignObjectRendering: false,
-      removeContainer: false
+      height: 1123
     });
-
     const imgData = canvas.toDataURL('image/png', 1.0);
     const { jsPDF } = window.jspdf;
-    // A4 = 210x297mm exact. Image fills page edge-to-edge — same as preview.
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4',
-      compress: true,
-      hotfixes: ['px_scaling']
-    });
+    // A4 = 210x297mm exact
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true });
     pdf.addImage(imgData, 'PNG', 0, 0, 210, 297, undefined, 'FAST');
     pdf.save(`invoice_${invoice.invoiceNo || Date.now()}.pdf`);
     showToast('PDF downloaded');
@@ -214,7 +163,7 @@ async function downloadPDF() {
     console.error(e);
     showToast('PDF failed: ' + e.message, 'error');
   } finally {
-    stage.innerHTML = '';
+    if (scaleEl) { scaleEl.style.transform = prevTransform; scaleEl.style.width = prevWidth; fitInvoiceToWidth(); }
     hideLoader();
   }
 }
