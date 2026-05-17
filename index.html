@@ -6,12 +6,8 @@
 <style>body{font-family:sans-serif;text-align:center;padding-top:60px;color:#475569;}</style>
 <script type="module">
 import { auth } from './js/firebase-config.js';
-auth.onAuthStateChanged(user => {
-  window.location.replace(user ? 'dashboard.html' : 'login.html');
-});
+auth.onAuthStateChanged(user => { window.location.replace(user ? 'dashboard.html' : 'login.html'); });
 </script>
 </head>
-<body>
-<p>Loading Royal Creation Billing...</p>
-</body>
+<body><p>Loading Royal Creation Billing...</p></body>
 </html>
